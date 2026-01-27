@@ -88,9 +88,12 @@ function findObjectByUrl(arr: any[], url: string) {
 }
 // 调用递归函数，传入menu数组 当前路由的路径
 // console.log(findObjectByUrl(menu.value, route.path));
-const { name, url, icon } = findObjectByUrl(menu.value, route.path); //获得后解构赋值
-addTab(name, url, icon);
-setCurrentTab(name, url);
+const menuItem = findObjectByUrl(menu.value, route.path); //获得后解构赋值
+if (menuItem) {
+  const { name, url, icon } = menuItem;
+  addTab(name, url, icon);
+  setCurrentTab(name, url);
+}
 </script>
 
 <style lang="less" scoped>
