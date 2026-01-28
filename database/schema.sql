@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS charging_stations (
   station_code VARCHAR(50) UNIQUE NOT NULL COMMENT '充电桩编号',
   station_name VARCHAR(100) NOT NULL COMMENT '充电桩名称',
   location VARCHAR(255) NOT NULL COMMENT '位置',
-  latitude DECIMAL(10, 7) COMMENT '纬度',
-  longitude DECIMAL(10, 7) COMMENT '经度',
+  latitude DECIMAL(10, 6) COMMENT '纬度',
+  longitude DECIMAL(11, 6) COMMENT '经度',
   power_capacity DECIMAL(10, 2) NOT NULL COMMENT '功率容量(kW)',
   status ENUM('online', 'offline', 'maintenance', 'fault') DEFAULT 'offline' COMMENT '状态',
   type ENUM('AC', 'DC', 'mixed') NOT NULL COMMENT '充电桩类型',
@@ -64,15 +64,16 @@ CREATE TABLE IF NOT EXISTS departments (
   INDEX idx_dept_code (dept_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门表';
 
--- 插入默认管理员账号
--- 用户名: admin123456  密码: 123456
-INSERT INTO users (username, password, department, role) 
-VALUES ('admin123456', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '管理部', 'admin')
-ON DUPLICATE KEY UPDATE username=username;
-
 -- 插入示例部门数据
 INSERT INTO departments (dept_name, dept_code, description) VALUES
 ('管理部', 'DEPT001', '负责整体管理和协调'),
 ('运维部', 'DEPT002', '负责充电桩运维'),
 ('财务部', 'DEPT003', '负责财务管理'),
-('技术部', 'DEPT004', '负责技术支持');
+('技术部', 'DEPT004', '负责技术支持')
+ON DUPLICATE KEY UPDATE dept_name=dept_name;
+
+-- 插入默认管理员账号
+-- 用户名: admin123456  密码: 123456
+INSERT INTO users (username, password, department, role) 
+VALUES ('admin123456', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '管理部', 'admin')
+ON DUPLICATE KEY UPDATE username=username;

@@ -8,7 +8,7 @@ import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import { createPinia } from "pinia";
-import "./mock";
+// import "./mock";  // 暂时禁用 Mock 数据
 import zhCn from "element-plus/es/locale/lang/zh-cn"; // 国际化全局配置 日历改为中文
 import permission from "./directives/permission";
 

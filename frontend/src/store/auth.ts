@@ -31,7 +31,6 @@ export const useUserStore = defineStore("user", {
       try {
         const response = await loginApi(data);
 
-        // 兼容新后端返回格式 { message, token, user }
         if (response.token) {
           this.token = response.token;
           this.username = response.user.username;
@@ -43,36 +42,16 @@ export const useUserStore = defineStore("user", {
           sessionStorage.setItem("username", response.user.username);
           sessionStorage.setItem("department", response.user.department);
 
-          // 如果有角色和菜单信息也保存
-          if (response.user.roles) {
-            this.roles = response.user.roles;
-            sessionStorage.setItem(
-              "roles",
-              JSON.stringify(response.user.roles),
-            );
-          }
+          // 保存角色信息
+          const roles = response.user.roles || [response.user.role];
+          this.roles = roles;
+          sessionStorage.setItem("roles", JSON.stringify(roles));
+
+          // 保存菜单信息
           if (response.menulist) {
             this.menu = response.menulist;
             sessionStorage.setItem("menu", JSON.stringify(response.menulist));
           }
-        }
-        // 兼容旧的返回格式
-        else if (response.data) {
-          const {
-            token,
-            user: { username, roles },
-            menulist,
-          } = response.data;
-          this.token = token;
-          this.username = username;
-          this.roles = roles;
-          this.menu = menulist;
-
-          localStorage.setItem("token", token);
-          sessionStorage.setItem("token", token);
-          sessionStorage.setItem("roles", JSON.stringify(roles));
-          sessionStorage.setItem("username", username);
-          sessionStorage.setItem("menu", JSON.stringify(menulist));
         }
       } catch (error) {
         console.error("登录失败:", error);
