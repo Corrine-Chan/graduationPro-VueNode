@@ -17,8 +17,8 @@ const service: AxiosInstance = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // 从 localStorage 获取 token 并添加到请求头
-    const token = localStorage.getItem("token");
+    // 从 sessionStorage 获取 token 并添加到请求头
+    const token = sessionStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -52,14 +52,19 @@ service.interceptors.response.use(
   (error: AxiosError) => {
     // 处理 401 未授权错误
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userInfo");
+      // 如果当前在登录页面，不要自动跳转，让组件处理错误
+      if (window.location.pathname === "/login") {
+        // 直接返回错误，让登录组件处理
+        return Promise.reject(error);
+      }
+
+      // 其他页面的 401 错误才清除缓存并跳转
+      sessionStorage.clear();
       ElNotification({
         title: "认证失败",
         message: "登录已过期，请重新登录",
         type: "warning",
       });
-      // 可以在这里跳转到登录页
       window.location.href = "/login";
     } else {
       ElNotification({

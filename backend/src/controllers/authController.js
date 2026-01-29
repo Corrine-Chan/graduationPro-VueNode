@@ -81,8 +81,8 @@ export const login = async (req, res) => {
       user.id,
     ]);
 
-    // 根据角色生成菜单列表
-    const menulist = generateMenuByRole(user.role);
+    // 根据角色和部门生成菜单列表
+    const menulist = generateMenuByRole(user.role, user.department);
 
     res.json({
       message: "登录成功",
@@ -102,8 +102,8 @@ export const login = async (req, res) => {
   }
 };
 
-// 根据角色生成菜单
-const generateMenuByRole = (role) => {
+// 根据角色和部门生成菜单
+const generateMenuByRole = (role, department) => {
   // 基础菜单（所有用户都可以访问）
   const baseMenu = [
     {
@@ -137,37 +137,132 @@ const generateMenuByRole = (role) => {
       url: "/map",
       icon: "Location",
     },
-    {
-      name: "运营管理",
-      icon: "Management",
-      children: [
-        {
-          name: "订单管理",
-          url: "/operations/orders",
-          icon: "List",
-        },
-        {
-          name: "订单详情",
-          url: "/operations/detail",
-          icon: "Document",
-        },
-        {
-          name: "总览统计",
-          url: "/operations/total",
-          icon: "DataLine",
-        },
-      ],
-    },
-    {
-      name: "告警管理",
-      url: "/alarm",
-      icon: "Bell",
-    },
-    {
-      name: "会员管理",
-      url: "/membership",
-      icon: "User",
-    },
+  ];
+
+  // 部门专属菜单
+  const departmentMenus = {
+    运营部: [
+      {
+        name: "运营管理",
+        icon: "Management",
+        children: [
+          {
+            name: "订单管理",
+            url: "/operations/orders",
+            icon: "List",
+          },
+          {
+            name: "订单详情",
+            url: "/operations/detail",
+            icon: "Document",
+          },
+          {
+            name: "总览统计",
+            url: "/operations/total",
+            icon: "DataLine",
+          },
+        ],
+      },
+    ],
+    技术部: [
+      {
+        name: "告警管理",
+        url: "/alarm",
+        icon: "Bell",
+      },
+    ],
+    市场部: [
+      {
+        name: "会员管理",
+        url: "/membership",
+        icon: "User",
+      },
+    ],
+    财务部: [
+      {
+        name: "运营管理",
+        icon: "Management",
+        children: [
+          {
+            name: "订单管理",
+            url: "/operations/orders",
+            icon: "List",
+          },
+          {
+            name: "订单详情",
+            url: "/operations/detail",
+            icon: "Document",
+          },
+          {
+            name: "总览统计",
+            url: "/operations/total",
+            icon: "DataLine",
+          },
+        ],
+      },
+    ],
+    维修部: [
+      {
+        name: "告警管理",
+        url: "/alarm",
+        icon: "Bell",
+      },
+      {
+        name: "充电桩管理",
+        icon: "Odometer",
+        children: [
+          {
+            name: "故障管理",
+            url: "/chargingstation/fault",
+            icon: "Warning",
+          },
+        ],
+      },
+    ],
+    客服部: [
+      {
+        name: "会员管理",
+        url: "/membership",
+        icon: "User",
+      },
+    ],
+    总经办: [
+      {
+        name: "运营管理",
+        icon: "Management",
+        children: [
+          {
+            name: "订单管理",
+            url: "/operations/orders",
+            icon: "List",
+          },
+          {
+            name: "订单详情",
+            url: "/operations/detail",
+            icon: "Document",
+          },
+          {
+            name: "总览统计",
+            url: "/operations/total",
+            icon: "DataLine",
+          },
+        ],
+      },
+      {
+        name: "告警管理",
+        url: "/alarm",
+        icon: "Bell",
+      },
+      {
+        name: "会员管理",
+        url: "/membership",
+        icon: "User",
+      },
+    ],
+  };
+
+  // 通用菜单（所有部门都有）
+  const commonMenu = [
     {
       name: "个人中心",
       url: "/personal",
@@ -189,12 +284,61 @@ const generateMenuByRole = (role) => {
     },
   ];
 
-  // 根据角色返回不同的菜单
+  // 组合菜单
+  let finalMenu = [...baseMenu];
+
+  // 如果是管理员，显示所有菜单
   if (role === "admin") {
-    return [...baseMenu, ...adminMenu];
+    // 管理员可以看到所有部门的菜单项
+    const allBusinessMenus = [
+      {
+        name: "运营管理",
+        icon: "Management",
+        children: [
+          {
+            name: "订单管理",
+            url: "/operations/orders",
+            icon: "List",
+          },
+          {
+            name: "订单详情",
+            url: "/operations/detail",
+            icon: "Document",
+          },
+          {
+            name: "总览统计",
+            url: "/operations/total",
+            icon: "DataLine",
+          },
+        ],
+      },
+      {
+        name: "告警管理",
+        url: "/alarm",
+        icon: "Bell",
+      },
+      {
+        name: "会员管理",
+        url: "/membership",
+        icon: "User",
+      },
+    ];
+
+    finalMenu = [
+      ...finalMenu,
+      ...allBusinessMenus,
+      ...commonMenu,
+      ...adminMenu,
+    ];
+  } else {
+    // 普通用户根据部门显示对应菜单
+    if (departmentMenus[department]) {
+      finalMenu = [...finalMenu, ...departmentMenus[department]];
+    }
+    finalMenu = [...finalMenu, ...commonMenu];
   }
 
-  return baseMenu;
+  return finalMenu;
 };
 
 // 验证token

@@ -15,17 +15,19 @@ interface RegisterParams {
 
 export const useUserStore = defineStore("user", {
   state: () => ({
-    token:
-      localStorage.getItem("token") || sessionStorage.getItem("token") || "",
-    roles: sessionStorage.getItem("roles")
-      ? JSON.parse(sessionStorage.getItem("roles")!)
-      : [],
+    token: sessionStorage.getItem("token") || "",
+    roles: (() => {
+      const roles = sessionStorage.getItem("roles");
+      return roles ? JSON.parse(roles) : [];
+    })(),
     username: sessionStorage.getItem("username") || "",
     department: sessionStorage.getItem("department") || "",
-    menu: sessionStorage.getItem("menu")
-      ? JSON.parse(sessionStorage.getItem("menu")!)
-      : [],
+    menu: (() => {
+      const menu = sessionStorage.getItem("menu");
+      return menu ? JSON.parse(menu) : [];
+    })(),
   }),
+
   actions: {
     async login(data: LoginParams) {
       try {
@@ -36,8 +38,7 @@ export const useUserStore = defineStore("user", {
           this.username = response.user.username;
           this.department = response.user.department;
 
-          // 保存到本地存储
-          localStorage.setItem("token", response.token);
+          // 保存到 sessionStorage
           sessionStorage.setItem("token", response.token);
           sessionStorage.setItem("username", response.user.username);
           sessionStorage.setItem("department", response.user.department);
@@ -76,10 +77,9 @@ export const useUserStore = defineStore("user", {
       this.department = "";
       this.menu = [];
 
-      localStorage.removeItem("token");
-      localStorage.removeItem("rememberedUsername");
-      localStorage.removeItem("rememberedPassword");
       sessionStorage.clear();
+      // 清除可能残留的密码记录，但保留用户名记录
+      localStorage.removeItem("rememberedPassword");
 
       const tabsStore = useTabsStore();
       tabsStore.clearAllTabs();

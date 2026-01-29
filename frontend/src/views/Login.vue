@@ -28,7 +28,7 @@
           <el-input
             v-model="loginForm.username"
             class="custom-input"
-            placeholder="请输入用户名"
+            placeholder="请输入用户名（6-20位）"
             prefix-icon="User"
           />
         </el-form-item>
@@ -36,7 +36,7 @@
           <el-input
             v-model="loginForm.password"
             class="custom-input"
-            placeholder="请输入密码"
+            placeholder="请输入密码（6-20位数字或字母数字组合）"
             prefix-icon="Lock"
             type="password"
             show-password
@@ -56,7 +56,7 @@
           </div>
         </el-form-item>
         <div class="form-options">
-          <el-checkbox v-model="rememberMe" label="记住密码" />
+          <el-checkbox v-model="rememberMe" label="记住我" />
           <span class="forgot-password" @click="handleForgotPassword"
             >忘记密码？</span
           >
@@ -78,7 +78,7 @@
           <el-input
             v-model="registerForm.username"
             class="custom-input"
-            placeholder="请输入用户名（6-11位）"
+            placeholder="请输入用户名（6-20位）"
             prefix-icon="User"
           />
         </el-form-item>
@@ -86,7 +86,7 @@
           <el-input
             v-model="registerForm.password"
             class="custom-input"
-            placeholder="请输入密码（6位数字）"
+            placeholder="请输入密码（6-20位数字或字母数字组合）"
             prefix-icon="Lock"
             type="password"
             show-password
@@ -103,12 +103,20 @@
           />
         </el-form-item>
         <el-form-item prop="department">
-          <el-input
+          <el-select
             v-model="registerForm.department"
-            class="custom-input"
-            placeholder="请输入所属部门"
-            prefix-icon="OfficeBuilding"
-          />
+            class="custom-select"
+            placeholder="请选择所属部门"
+            style="width: 100%"
+          >
+            <el-option label="总经办" value="总经办" />
+            <el-option label="运营部" value="运营部" />
+            <el-option label="技术部" value="技术部" />
+            <el-option label="市场部" value="市场部" />
+            <el-option label="财务部" value="财务部" />
+            <el-option label="维修部" value="维修部" />
+            <el-option label="客服部" value="客服部" />
+          </el-select>
         </el-form-item>
         <el-form-item prop="captcha">
           <div class="captcha-container">
@@ -203,14 +211,24 @@ const loginRules = reactive<FormRules<LoginForm>>({
     { required: true, message: "用户名不能为空", trigger: "blur" },
     {
       min: 6,
-      max: 11,
-      message: "用户名要求6-11位数字字母组合",
+      max: 20,
+      message: "用户名要求6-20位",
       trigger: "blur",
     },
   ],
   password: [
     { required: true, message: "密码不能为空", trigger: "blur" },
-    { pattern: /^\d{6}$/, message: "密码必须是6位纯数字", trigger: "blur" },
+    {
+      min: 6,
+      max: 20,
+      message: "密码长度为6-20位",
+      trigger: "blur",
+    },
+    {
+      pattern: /^(?:\d{6,20}|[a-zA-Z]+\d+|\d+[a-zA-Z]+|[a-zA-Z\d]{6,20})$/,
+      message: "密码必须是6位以上纯数字或字母数字组合",
+      trigger: "blur",
+    },
   ],
   captcha: [{ validator: validateCaptcha, trigger: "blur" }],
 });
@@ -221,17 +239,29 @@ const registerRules = reactive<FormRules<RegisterForm>>({
     { required: true, message: "用户名不能为空", trigger: "blur" },
     {
       min: 6,
-      max: 11,
-      message: "用户名要求6-11位数字字母组合",
+      max: 20,
+      message: "用户名要求6-20位",
       trigger: "blur",
     },
   ],
   password: [
     { required: true, message: "密码不能为空", trigger: "blur" },
-    { pattern: /^\d{6}$/, message: "密码必须是6位纯数字", trigger: "blur" },
+    {
+      min: 6,
+      max: 20,
+      message: "密码长度为6-20位",
+      trigger: "blur",
+    },
+    {
+      pattern: /^(?:\d{6,20}|[a-zA-Z]+\d+|\d+[a-zA-Z]+|[a-zA-Z\d]{6,20})$/,
+      message: "密码必须是6位以上纯数字或字母数字组合",
+      trigger: "blur",
+    },
   ],
   confirmPassword: [{ validator: validateConfirmPassword, trigger: "blur" }],
-  department: [{ required: true, message: "请输入所属部门", trigger: "blur" }],
+  department: [
+    { required: true, message: "请选择所属部门", trigger: "change" },
+  ],
   captcha: [{ validator: validateCaptcha, trigger: "blur" }],
 });
 
@@ -282,20 +312,43 @@ const handleLogin = () => {
           password: loginForm.password,
         });
 
-        // 如果选择记住密码，保存到本地存储
+        // 如果选择记住我，只保存用户名到本地存储
         if (rememberMe.value) {
           localStorage.setItem("rememberedUsername", loginForm.username);
-          localStorage.setItem("rememberedPassword", loginForm.password);
         } else {
           localStorage.removeItem("rememberedUsername");
-          localStorage.removeItem("rememberedPassword");
         }
 
-        ElMessage.success("登录成功");
-        router.push("/");
-      } catch (error) {
-        ElMessage.error("登录失败，请检查用户名和密码");
-        refreshCaptcha();
+        ElMessage({
+          message: "登录成功",
+          type: "success",
+          duration: 3000, // 显示3秒
+        });
+        router.push("/dashboard");
+      } catch (error: any) {
+        console.error("登录错误:", error);
+
+        // 获取错误信息
+        let errorMessage = "登录失败，请重试";
+
+        if (error?.response?.data?.message) {
+          // 后端返回的错误信息
+          errorMessage = error.response.data.message;
+        } else if (error?.message) {
+          // 网络错误等
+          errorMessage = error.message;
+        }
+
+        ElMessage({
+          message: errorMessage,
+          type: "error",
+          duration: 4000, // 显示4秒
+        });
+
+        // 延迟刷新验证码，让用户有时间看到错误信息
+        setTimeout(() => {
+          refreshCaptcha();
+        }, 2000);
       }
     }
   });
@@ -311,11 +364,22 @@ const handleRegister = () => {
           password: registerForm.password,
           department: registerForm.department,
         });
-        ElMessage.success("注册成功，请登录");
+        ElMessage({
+          message: "注册成功，请登录",
+          type: "success",
+          duration: 3000, // 显示3秒
+        });
         switchToLogin();
       } catch (error) {
-        ElMessage.error("注册失败，请重试");
-        refreshCaptcha();
+        ElMessage({
+          message: "注册失败，请重试",
+          type: "error",
+          duration: 4000, // 显示4秒
+        });
+        // 延迟刷新验证码
+        setTimeout(() => {
+          refreshCaptcha();
+        }, 2000);
       }
     }
   });
@@ -323,17 +387,19 @@ const handleRegister = () => {
 
 // 处理忘记密码
 const handleForgotPassword = () => {
-  ElMessage.info("请联系管理员重置密码");
+  ElMessage({
+    message: "请联系管理员重置密码",
+    type: "info",
+    duration: 4000, // 显示4秒
+  });
   // TODO: 后续可以实现找回密码功能
 };
 
-// 页面加载时检查是否有记住的密码
+// 页面加载时检查是否有记住的用户名
 const loadRememberedCredentials = () => {
   const username = localStorage.getItem("rememberedUsername");
-  const password = localStorage.getItem("rememberedPassword");
-  if (username && password) {
+  if (username) {
     loginForm.username = username;
-    loginForm.password = password;
     rememberMe.value = true;
   }
 };
@@ -449,6 +515,33 @@ loadRememberedCredentials();
           .el-icon {
             font-size: 18px;
           }
+        }
+      }
+
+      :deep(.custom-select) {
+        .el-select__wrapper {
+          font-size: 16px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+          box-shadow: none !important;
+          padding: 0 15px;
+          transition: all 0.3s ease;
+
+          &.is-focus {
+            box-shadow: 0 0 0 1px rgba(166, 201, 51, 0.5) !important;
+            border-color: rgba(84, 141, 24, 0.8);
+          }
+        }
+
+        .el-select__placeholder {
+          color: rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .el-select__selected-item {
+          color: #333;
         }
       }
 
