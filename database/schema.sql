@@ -77,3 +77,23 @@ ON DUPLICATE KEY UPDATE dept_name=dept_name;
 INSERT INTO users (username, password, department, role) 
 VALUES ('admin123456', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '管理部', 'admin')
 ON DUPLICATE KEY UPDATE username=username;
+
+-- 充电站监控表
+CREATE TABLE IF NOT EXISTS station_monitor (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  station_id VARCHAR(50) UNIQUE NOT NULL COMMENT '站点ID',
+  station_name VARCHAR(200) NOT NULL COMMENT '站点名称',
+  city VARCHAR(50) NOT NULL COMMENT '所属城市',
+  fast_charge INT NOT NULL DEFAULT 0 COMMENT '快充数量',
+  slow_charge INT NOT NULL DEFAULT 0 COMMENT '慢充数量',
+  status TINYINT NOT NULL DEFAULT 2 COMMENT '状态: 2-使用中 3-空闲中 4-维护中 5-待维修',
+  charging_now INT NOT NULL DEFAULT 0 COMMENT '正在充电数量',
+  fault_count INT NOT NULL DEFAULT 0 COMMENT '故障数',
+  manager_name VARCHAR(50) NOT NULL COMMENT '站点负责人',
+  manager_tel VARCHAR(20) NOT NULL COMMENT '负责人电话',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_station_id (station_id),
+  INDEX idx_city (city),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充电站监控表';

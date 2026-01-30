@@ -112,7 +112,7 @@ const generateMenuByRole = (role, department) => {
       icon: "DataAnalysis",
     },
     {
-      name: "充电桩管理",
+      name: "充电站管理",
       icon: "Odometer",
       children: [
         {
@@ -126,7 +126,7 @@ const generateMenuByRole = (role, department) => {
           icon: "TrendCharts",
         },
         {
-          name: "故障管理",
+          name: "充电桩管理",
           url: "/chargingstation/fault",
           icon: "Warning",
         },
@@ -208,11 +208,11 @@ const generateMenuByRole = (role, department) => {
         icon: "Bell",
       },
       {
-        name: "充电桩管理",
+        name: "充电站管理",
         icon: "Odometer",
         children: [
           {
-            name: "故障管理",
+            name: "充电桩管理",
             url: "/chargingstation/fault",
             icon: "Warning",
           },

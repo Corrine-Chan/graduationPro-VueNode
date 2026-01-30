@@ -1,18 +1,27 @@
 # 绿闪桩能源管理平台
 
-一个基于 Vue3 + Node.js + MySQL 的充电站管理系统。
+一个基于 Vue 3 + Node.js + MySQL 的充电站管理系统，采用前后端分离架构。
+
+## 📊 项目进度
+
+- **已完成**: 3个模块（用户认证、数据看板、充电站监控）
+- **待开发**: 9个模块
+- **完成度**: 25%
+
+详细进度请查看：[项目进度说明.md](项目进度说明.md)
 
 ## 📁 项目结构
 
 ```
 graduationPro-VueNode/
-├── frontend/              # 前端项目 (Vue3 + TypeScript + Vite)
+├── frontend/              # 前端项目 (Vue 3 + TypeScript + Vite)
 │   ├── src/
 │   │   ├── api/          # API 接口
 │   │   ├── components/   # 组件
 │   │   ├── views/        # 页面
-│   │   ├── store/        # 状态管理
-│   │   └── router/       # 路由
+│   │   ├── store/        # 状态管理 (Pinia)
+│   │   ├── router/       # 路由
+│   │   └── utils/        # 工具函数
 │   └── package.json
 │
 ├── backend/              # 后端项目 (Node.js + Express)
@@ -24,20 +33,27 @@ graduationPro-VueNode/
 │   └── package.json
 │
 ├── database/             # 数据库脚本
-│   ├── schema.sql        # 数据库结构
-│   ├── extended-schema.sql  # 扩展表结构
-│   ├── generate-test-data.sql  # 测试数据
-│   └── init-all.bat      # 一键初始化
+│   └── schema.sql        # 完整数据库结构
 │
-└── docs/                 # 项目文档
-    ├── 快速启动指南.md
-    ├── 开发指南.md
-    └── 项目更新说明.md
+├── docs/                 # 项目文档
+│   ├── 快速启动指南.md
+│   ├── 开发指南.md
+│   └── Bug修复-新增充电站状态选项.md
+│
+├── 项目进度说明.md       # 详细项目进度
+├── 默认账号.txt          # 默认登录账号
+└── 启动项目.bat          # 快速启动脚本 (Windows)
 ```
 
 ## 🚀 快速开始
 
-### 1. 安装依赖
+### 方式一：使用启动脚本（推荐）
+
+双击运行 `启动项目.bat`（仅限Windows）
+
+### 方式二：手动启动
+
+#### 1. 安装依赖
 
 ```bash
 # 安装前端依赖
@@ -49,82 +65,145 @@ cd backend
 npm install
 ```
 
-### 2. 配置数据库
+#### 2. 配置数据库
 
 修改 `backend/.env` 文件：
 
 ```env
+PORT=5501
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=你的密码
 DB_NAME=charging_station
+JWT_SECRET=your_secret_key
+CORS_ORIGIN=http://localhost:5173
 ```
 
-### 3. 初始化数据库
+#### 3. 初始化数据库
 
 ```bash
-cd database
-# 双击运行 init-all.bat
-# 或手动执行：
-mysql -u root -p < schema.sql
-mysql -u root -p < extended-schema.sql
-mysql -u root -p < generate-test-data.sql
+# 创建数据库并导入结构
+mysql -u root -p < database/schema.sql
 ```
 
-### 4. 启动项目
+**注意**: 充电站监控数据已在本地Navicat中插入，无需重复导入。
+
+#### 4. 启动服务
 
 ```bash
-# 启动后端 (端口 5501)
+# 启动后端服务 (端口 5501)
 cd backend
 npm run dev
 
-# 启动前端 (端口 5173)
+# 启动前端服务 (端口 5173)
 cd frontend
 npm run dev
 ```
 
-### 5. 访问系统
+#### 5. 访问系统
 
 打开浏览器访问：`http://localhost:5173`
 
 **默认账号：**
 
-- 管理员：`admin123456` / `123456`
-- 测试用户：`test123456` / `123456`
+- 管理员：`admin123` / `123456`
+- 测试用户：`user123` / `666666`
 
-## 📊 功能模块
+## ✅ 已完成功能
 
-- ✅ 用户登录/注册
-- ✅ 数据看板
-- ⏳ 充电站管理
-- ⏳ 充电桩管理
-- ⏳ 订单管理
-- ⏳ 营收统计
-- ⏳ 会员管理
-- ⏳ 系统管理
+### 1. 用户认证模块
+
+- ✅ 用户登录
+- ✅ JWT token认证
+- ✅ 基于角色的权限控制
+- ✅ 密码加密存储
+
+### 2. 数据看板模块
+
+- ✅ 折线图数据展示
+- ✅ 饼图数据展示
+- ✅ 雷达图数据展示
+- ✅ 设备统计
+- ✅ 营收排行
+- ✅ 最新告警
+
+### 3. 充电站监控模块
+
+- ✅ 充电站列表查询（分页、筛选）
+- ✅ 新增/编辑充电站
+- ✅ 删除充电站
+- ✅ 统计数据展示
+- ✅ 按名称/ID查询
+- ✅ 按状态筛选
+
+## 🚧 待开发功能
+
+- ⏳ 充电站管理 - 营收统计
+- ⏳ 充电站管理 - 充电桩管理
+- ⏳ 电子地图
+- ⏳ 运营管理（订单、计费）
+- ⏳ 报警管理
+- ⏳ 会员卡管理
+- ⏳ 招商管理
+- ⏳ 系统设置
+- ⏳ 个人中心
 
 ## 🛠️ 技术栈
 
 ### 前端
 
-- Vue 3
-- TypeScript
-- Vite
-- Element Plus
-- Pinia
-- Vue Router
-- ECharts
+- Vue 3 - 渐进式JavaScript框架
+- TypeScript - JavaScript的超集
+- Vite - 下一代前端构建工具
+- Element Plus - Vue 3组件库
+- Pinia - Vue状态管理
+- Vue Router - 路由管理
+- ECharts - 数据可视化
+- Axios - HTTP客户端
 
 ### 后端
 
-- Node.js
-- Express
-- MySQL
-- JWT
-- bcryptjs
+- Node.js - JavaScript运行时
+- Express - Web应用框架
+- MySQL - 关系型数据库
+- JWT - 身份认证
+- bcrypt - 密码加密
+- nodemon - 开发热重载
 
-## 📝 开发说明
+## 📝 API接口
+
+### 认证接口
+
+- `POST /api/auth/login` - 用户登录
+
+### 数据看板接口
+
+- `GET /api/dashboard/chartData` - 折线图数据
+- `GET /api/dashboard/chartData2` - 饼图数据
+- `GET /api/dashboard/chartData3` - 雷达图数据
+- `GET /api/dashboard/deviceStats` - 设备统计
+- `GET /api/dashboard/revenueRanking` - 营收排行
+- `GET /api/dashboard/latestAlarms` - 最新告警
+
+### 充电站监控接口
+
+- `POST /api/station/list` - 获取充电站列表
+- `POST /api/station/edit` - 新增/编辑充电站
+- `POST /api/station/delete` - 删除充电站
+- `GET /api/station/stats` - 获取统计数据
+
+## 🗄️ 数据库表
+
+### 已创建的表
+
+1. `users` - 用户表
+2. `departments` - 部门表
+3. `charging_stations` - 充电桩表
+4. `charging_orders` - 充电订单表
+5. `station_monitor` - 充电站监控表（32条数据）
+
+## 🔧 开发命令
 
 ### 前端开发
 
@@ -132,49 +211,98 @@ npm run dev
 cd frontend
 npm run dev      # 开发模式
 npm run build    # 生产构建
+npm run preview  # 预览构建结果
 ```
 
 ### 后端开发
 
 ```bash
 cd backend
-npm run dev      # 开发模式（nodemon）
+npm run dev      # 开发模式（nodemon自动重启）
 npm start        # 生产模式
 ```
-
-### 数据库管理
-
-- 使用 Navicat 或 MySQL Workbench
-- 数据库名：`charging_station`
-- 字符集：`utf8mb4`
 
 ## 🔧 环境要求
 
 - Node.js >= 16.0.0
-- MySQL >= 5.7
+- MySQL >= 8.0
 - npm >= 8.0.0
 
 ## 📖 文档
 
-详细文档请查看 `docs/` 目录：
-
-- [快速启动指南](docs/快速启动指南.md)
-- [开发指南](docs/开发指南.md)
-- [项目更新说明](docs/项目更新说明.md)
+- [项目进度说明](项目进度说明.md) - 详细的项目进度和功能说明
+- [快速启动指南](docs/快速启动指南.md) - 快速启动步骤
+- [开发指南](docs/开发指南.md) - 开发规范和指南
+- [Bug修复记录](docs/Bug修复-新增充电站状态选项.md) - Bug修复说明
 
 ## 🐛 常见问题
 
 ### 1. 数据库连接失败
 
-检查 `backend/.env` 中的数据库配置是否正确。
+**解决方案**:
+
+- 检查MySQL服务是否运行
+- 确认 `backend/.env` 中的数据库配置正确
+- 确认数据库 `charging_station` 已创建
 
 ### 2. 端口被占用
 
-修改 `backend/.env` 中的 `PORT` 配置。
+**解决方案**:
 
-### 3. 前端无法访问后端
+```bash
+# 查看端口占用
+netstat -ano | findstr :5501  # 后端端口
+netstat -ano | findstr :5173  # 前端端口
 
-检查 `frontend/.env` 中的 `VITE_API_URL` 配置。
+# 杀掉占用进程
+taskkill /F /PID <进程ID>
+```
+
+### 3. 登录失败
+
+**解决方案**:
+
+- 确认使用正确的账号: `admin123` / `123456`
+- 检查后端服务是否正常运行
+- 查看浏览器控制台是否有错误信息
+
+### 4. 前端无法访问后端
+
+**解决方案**:
+
+- 检查 `frontend/.env.development` 中的 `VITE_API_URL` 配置
+- 确认后端服务运行在 `http://localhost:5501`
+- 检查CORS配置
+
+## 📈 项目统计
+
+- **代码行数**: ~15,000行
+- **API接口**: 10个已实现，30+待开发
+- **数据库表**: 5个已创建
+- **前端页面**: 12个主要页面
+- **测试数据**: 32条充电站数据
+
+## 🎯 下一步计划
+
+### 短期目标（1-2周）
+
+1. 完成充电站管理的其他子模块
+2. 实现电子地图功能
+3. 完善运营管理模块
+
+### 中期目标（1个月）
+
+1. 完成所有模块的后端API开发
+2. 完成前后端联调
+3. 完善数据库设计
+
+### 长期目标（2-3个月）
+
+1. 添加数据导出功能
+2. 优化前端UI/UX
+3. 添加单元测试
+4. 性能优化
+5. 部署上线
 
 ## 📄 License
 
@@ -183,3 +311,9 @@ MIT
 ## 👥 作者
 
 绿闪桩团队
+
+---
+
+**最后更新**: 2026-01-30  
+**项目状态**: 🚧 开发中  
+**完成度**: 25%

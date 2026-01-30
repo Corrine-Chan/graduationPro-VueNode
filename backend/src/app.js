@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import stationRoutes from "./routes/station.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { testConnection } from "./config/database.js";
 
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 // 路由
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/station", stationRoutes);
 
 // 健康检查
 app.get("/api/health", (req, res) => {

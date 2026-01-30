@@ -19,9 +19,10 @@ interface RevenueType {
 
 const Api = {
   // 根据后端接口写
-  List: "/stationList",
-  Edit: "/station/edit",
-  Delete: "/station/delete",
+  List: "/api/station/list",
+  Edit: "/api/station/edit",
+  Delete: "/api/station/delete",
+  Stats: "/api/station/stats",
   RevenueChart: "/revenueChart",
   Revenue: "/revenueList",
   CurrentList: "/currentList",
@@ -50,4 +51,17 @@ function currentListApi() {
   return post(Api.CurrentList);
 }
 
-export { listApi, editApi, deleteApi, chartApi, revenueApi, currentListApi };
+// 获取充电站统计数据
+function getStationStatsApi() {
+  return get(Api.Stats);
+}
+
+export {
+  listApi,
+  editApi,
+  deleteApi,
+  chartApi,
+  revenueApi,
+  currentListApi,
+  getStationStatsApi,
+};
