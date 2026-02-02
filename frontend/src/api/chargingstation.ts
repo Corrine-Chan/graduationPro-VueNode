@@ -23,10 +23,9 @@ const Api = {
   Edit: "/api/station/edit",
   Delete: "/api/station/delete",
   Stats: "/api/station/stats",
-  // API接口配置
   RevenueChart: "/api/station/revenue/chart",
   Revenue: "/api/station/revenue/list",
-  CurrentList: "/currentList",
+  CurrentList: "/api/station/pile/list",
 };
 function listApi(data: ListType) {
   // 要传参根据后端接口来

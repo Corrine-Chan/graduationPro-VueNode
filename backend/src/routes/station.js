@@ -7,6 +7,7 @@ import {
   getStationStats,
   getRevenueList,
   getRevenueChart,
+  getPileList,
 } from "../controllers/stationController.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -32,5 +33,8 @@ router.post("/revenue/list", getRevenueList);
 
 // 获取营收图表数据
 router.get("/revenue/chart", getRevenueChart);
+
+// 获取充电桩列表
+router.post("/pile/list", getPileList);
 
 export default router;

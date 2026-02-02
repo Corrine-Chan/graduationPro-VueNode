@@ -134,6 +134,38 @@ CREATE TABLE IF NOT EXISTS revenue_chart (
   UNIQUE KEY uk_year_month (stat_year, month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='营收图表数据表';
 
+-- 充电桩详情表
+CREATE TABLE IF NOT EXISTS charging_pile (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pile_id VARCHAR(50) NOT NULL COMMENT '充电桩ID',
+  station_id VARCHAR(50) NOT NULL COMMENT '所属充电站ID',
+  station_name VARCHAR(200) NOT NULL COMMENT '所属充电站名称',
+  voltage VARCHAR(20) NOT NULL DEFAULT '314v' COMMENT '电压',
+  current VARCHAR(20) NOT NULL DEFAULT '212.2A' COMMENT '电流',
+  power VARCHAR(20) NOT NULL DEFAULT '21KW' COMMENT '功率',
+  temperature VARCHAR(20) NOT NULL DEFAULT '32°c' COMMENT '温度',
+  status TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1-空闲 2-充电中 3-连接中 4-排队中 5-被预约 6-故障/离线',
+  charge_percent VARCHAR(10) COMMENT '充电进度百分比',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_pile_id (pile_id),
+  INDEX idx_station_id (station_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充电桩详情表';
+
+-- 充电桩使用记录表
+CREATE TABLE IF NOT EXISTS pile_usage_record (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pile_id VARCHAR(50) NOT NULL COMMENT '充电桩ID',
+  record_time TIME NOT NULL COMMENT '记录时间',
+  energy_consumed DECIMAL(10, 2) NOT NULL COMMENT '充电度数',
+  amount DECIMAL(10, 2) NOT NULL COMMENT '消费金额',
+  record_date DATE NOT NULL DEFAULT (CURDATE()) COMMENT '记录日期',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_pile_id (pile_id),
+  INDEX idx_record_date (record_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充电桩使用记录表';
+
 
 -- 插入营收统计示例数据（当前日期）
 INSERT INTO station_revenue (station_id, station_name, city, pile_count, electricity_fee, parking_fee, service_fee, member_recharge, daily_total, monthly_total, daily_growth_rate, monthly_growth_rate, stat_date) VALUES
@@ -196,3 +228,37 @@ INSERT INTO revenue_chart (month, sales_amount, visit_count, stat_year) VALUES
 ON DUPLICATE KEY UPDATE 
   sales_amount = VALUES(sales_amount),
   visit_count = VALUES(visit_count);
+
+
+-- 插入充电桩详情示例数据（北京西单充电站的充电桩）
+INSERT INTO charging_pile (pile_id, station_id, station_name, voltage, current, power, temperature, status, charge_percent) VALUES
+('CD1001', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1002', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '29°c', 2, '70%'),
+('CD1003', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1004', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '30°c', 2, '70%'),
+('CD1005', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '30°c', 2, '70%'),
+('CD1006', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '28°c', 2, '70%'),
+('CD1007', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 6, NULL),
+('CD1008', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '31°c', 2, '70%'),
+('CD1009', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1010', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 4, NULL),
+('CD1011', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1012', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 4, NULL),
+('CD1013', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1014', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 5, NULL),
+('CD1015', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 1, NULL),
+('CD1016', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 2, '70%'),
+('CD1017', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 6, NULL),
+('CD1018', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 6, NULL),
+('CD1019', 'VXZ10001', '北京西单充电站', '314v', '212.2A', '21KW', '32°c', 6, NULL)
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 插入充电桩使用记录示例数据（CD1001的使用记录）
+INSERT INTO pile_usage_record (pile_id, record_time, energy_consumed, amount, record_date) VALUES
+('CD1001', '12:08:17', 80.00, 80.00, CURDATE()),
+('CD1001', '13:12:09', 50.00, 50.00, CURDATE()),
+('CD1001', '13:15:22', 60.00, 60.00, CURDATE()),
+('CD1001', '16:22:33', 70.00, 70.00, CURDATE()),
+('CD1001', '17:27:17', 90.00, 90.00, CURDATE()),
+('CD1001', '18:08:33', 100.00, 100.00, CURDATE())
+ON DUPLICATE KEY UPDATE energy_consumed = VALUES(energy_consumed);

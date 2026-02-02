@@ -331,3 +331,68 @@ export const getRevenueChart = async (req, res) => {
     });
   }
 };
+
+// 获取充电桩列表（按充电站分组）
+export const getPileList = async (req, res) => {
+  try {
+    // 查询所有充电站及其充电桩
+    const [stations] = await pool.query(
+      `SELECT DISTINCT station_id as id, station_name as name 
+       FROM charging_pile 
+       ORDER BY station_id ASC`,
+    );
+
+    // 为每个充电站查询其充电桩列表
+    const result = [];
+    for (const station of stations) {
+      const [piles] = await pool.query(
+        `SELECT 
+          pile_id as id,
+          voltage,
+          current,
+          power,
+          temperature as tem,
+          status,
+          charge_percent as percent
+        FROM charging_pile 
+        WHERE station_id = ?
+        ORDER BY pile_id ASC`,
+        [station.id],
+      );
+
+      // 为每个充电桩查询使用记录
+      for (const pile of piles) {
+        const [records] = await pool.query(
+          `SELECT 
+            DATE_FORMAT(record_time, '%H:%i:%s') as time,
+            CONCAT('充电', energy_consumed, '度，消费', amount, '元') as msg
+          FROM pile_usage_record 
+          WHERE pile_id = ? AND record_date = CURDATE()
+          ORDER BY record_time DESC
+          LIMIT 10`,
+          [pile.id],
+        );
+        pile.record = records;
+      }
+
+      result.push({
+        id: station.id,
+        name: station.name,
+        list: piles,
+      });
+    }
+
+    res.json({
+      code: 200,
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("获取充电桩列表失败:", error);
+    res.status(500).json({
+      code: 500,
+      success: false,
+      message: "服务器错误",
+    });
+  }
+};

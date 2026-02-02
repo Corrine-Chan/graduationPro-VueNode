@@ -102,9 +102,9 @@ export const getChartData3 = async (req, res) => {
     const [pileStats] = await pool.query(`
       SELECT 
         COUNT(*) as total_piles,
-        SUM(CASE WHEN status = 'charging' THEN 1 ELSE 0 END) as charging_piles,
-        SUM(CASE WHEN status = 'fault' THEN 1 ELSE 0 END) as fault_piles
-      FROM charging_piles
+        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as charging_piles,
+        SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as fault_piles
+      FROM charging_pile
     `);
 
     // 计算各项指标百分比
@@ -144,9 +144,9 @@ export const getDeviceStats = async (req, res) => {
     const [pileStats] = await pool.query(`
       SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN status IN ('charging', 'idle') THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN status = 'fault' THEN 1 ELSE 0 END) as fault
-      FROM charging_piles
+        SUM(CASE WHEN status IN (1, 2) THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as fault
+      FROM charging_pile
     `);
 
     // 充电站统计
