@@ -1,9 +1,12 @@
+// 充电站管理路由配置
 import express from "express";
 import {
   getStationList,
   editStation,
   deleteStation,
   getStationStats,
+  getRevenueList,
+  getRevenueChart,
 } from "../controllers/stationController.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -23,5 +26,11 @@ router.post("/delete", deleteStation);
 
 // 获取充电站统计数据
 router.get("/stats", getStationStats);
+
+// 获取营收统计列表
+router.post("/revenue/list", getRevenueList);
+
+// 获取营收图表数据
+router.get("/revenue/chart", getRevenueChart);
 
 export default router;

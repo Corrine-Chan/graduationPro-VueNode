@@ -23,8 +23,9 @@ const Api = {
   Edit: "/api/station/edit",
   Delete: "/api/station/delete",
   Stats: "/api/station/stats",
-  RevenueChart: "/revenueChart",
-  Revenue: "/revenueList",
+  // API接口配置
+  RevenueChart: "/api/station/revenue/chart",
+  Revenue: "/api/station/revenue/list",
   CurrentList: "/currentList",
 };
 function listApi(data: ListType) {

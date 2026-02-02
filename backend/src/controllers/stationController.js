@@ -205,3 +205,129 @@ export const getStationStats = async (req, res) => {
     });
   }
 };
+
+// 营收API实现
+// 获取营收统计列表（带分页和筛选）
+export const getRevenueList = async (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, name = "" } = req.body;
+
+    // 构建查询条件
+    let whereConditions = [];
+    let queryParams = [];
+
+    // 按名称查询（模糊匹配）
+    if (name) {
+      whereConditions.push("station_name LIKE ?");
+      queryParams.push(`%${name}%`);
+    }
+
+    // 只查询当前日期的数据
+    whereConditions.push("stat_date = CURDATE()");
+
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(" AND ")}`
+        : "";
+
+    // 查询总数
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) as total FROM station_revenue ${whereClause}`,
+      queryParams,
+    );
+    const total = countResult[0].total;
+
+    // 查询分页数据
+    const offset = (page - 1) * pageSize;
+    queryParams.push(parseInt(pageSize), offset);
+
+    const [rows] = await pool.query(
+      `SELECT 
+        station_id as id,
+        station_name as name,
+        city,
+        pile_count as count,
+        electricity_fee as electricity,
+        parking_fee as parkingFee,
+        service_fee as serviceFee,
+        member_recharge as member,
+        daily_total as day,
+        monthly_total as month,
+        daily_growth_rate as percent,
+        monthly_growth_rate as mpercent
+      FROM station_revenue 
+      ${whereClause}
+      ORDER BY id ASC
+      LIMIT ? OFFSET ?`,
+      queryParams,
+    );
+
+    res.json({
+      code: 200,
+      success: true,
+      data: {
+        list: rows,
+        total: total,
+      },
+    });
+  } catch (error) {
+    console.error("获取营收统计列表失败:", error);
+    res.status(500).json({
+      code: 500,
+      success: false,
+      message: "服务器错误",
+    });
+  }
+};
+
+// 获取营收图表数据
+export const getRevenueChart = async (req, res) => {
+  try {
+    const currentYear = new Date().getFullYear();
+
+    // 查询当前年份的月度数据
+    const [rows] = await pool.query(
+      `SELECT 
+        month,
+        sales_amount,
+        visit_count
+      FROM revenue_chart 
+      WHERE stat_year = ?
+      ORDER BY month ASC`,
+      [currentYear],
+    );
+
+    // 构建图表数据格式
+    const salesData = [];
+    const visitData = [];
+
+    rows.forEach((row) => {
+      salesData.push(row.sales_amount);
+      visitData.push(row.visit_count);
+    });
+
+    res.json({
+      code: 200,
+      success: true,
+      data: {
+        list: [
+          {
+            name: "销售",
+            data: salesData,
+          },
+          {
+            name: "访问量",
+            data: visitData,
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("获取营收图表数据失败:", error);
+    res.status(500).json({
+      code: 500,
+      success: false,
+      message: "服务器错误",
+    });
+  }
+};
