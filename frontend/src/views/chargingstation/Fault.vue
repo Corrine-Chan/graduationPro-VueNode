@@ -177,17 +177,25 @@
                       >
                     </template>
                     <h3 style="margin-bottom: 16px">使用记录</h3>
-                    <el-timeline>
-                      <el-timeline-item
-                        :timestamp="j.time"
-                        v-for="j in item.record"
-                        :key="j.time"
-                        type="primary"
-                        hollow
-                      >
-                        {{ j.msg }}
-                      </el-timeline-item>
-                    </el-timeline>
+                    <!-- 判断是否有使用记录数据 有数据正常显示时间线 -->
+                    <div v-if="item.record && item.record.length > 0">
+                      <el-timeline>
+                        <el-timeline-item
+                          :timestamp="j.time"
+                          v-for="j in item.record"
+                          :key="j.time"
+                          type="primary"
+                          hollow
+                        >
+                          {{ j.msg }}
+                        </el-timeline-item>
+                      </el-timeline>
+                    </div>
+                    <el-empty
+                      v-else
+                      description="暂无使用记录"
+                      :image-size="80"
+                    />
                   </el-popover>
                 </div>
               </div>
