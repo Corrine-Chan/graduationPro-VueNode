@@ -275,6 +275,11 @@ const loadData = async () => {
   loading.value = false;
   // 后端已经返回了day字段（daily_total），直接使用即可
   tableData.value = list;
+  // 前端计算 单日总收入
+  // tableData.value = list.map((item: any) => ({
+  //   ...item,
+  //   day: item.electricity + item.parkingFee + item.serviceFee + item.member,
+  // }));
 };
 
 const { totals, pageInfo, handleCurrentChange, handleSizeChange, setTotals } =
