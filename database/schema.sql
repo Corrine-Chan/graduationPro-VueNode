@@ -262,3 +262,40 @@ INSERT INTO pile_usage_record (pile_id, record_time, energy_consumed, amount, re
 ('CD1001', '17:27:17', 90.00, 90.00, CURDATE()),
 ('CD1001', '18:08:33', 100.00, 100.00, CURDATE())
 ON DUPLICATE KEY UPDATE energy_consumed = VALUES(energy_consumed);
+
+-- 充电桩维修记录表
+CREATE TABLE IF NOT EXISTS pile_maintenance_record (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pile_id VARCHAR(50) NOT NULL COMMENT '充电桩ID',
+  station_id VARCHAR(50) NOT NULL COMMENT '所属充电站ID',
+  fault_type VARCHAR(100) NOT NULL COMMENT '故障类型',
+  fault_description TEXT COMMENT '故障描述',
+  maintenance_type TINYINT NOT NULL DEFAULT 1 COMMENT '维修类型: 1-日常维护 2-故障维修 3-紧急抢修',
+  maintenance_status TINYINT NOT NULL DEFAULT 1 COMMENT '维修状态: 1-待维修 2-维修中 3-已完成',
+  technician_name VARCHAR(50) COMMENT '维修技师',
+  start_time DATETIME COMMENT '开始维修时间',
+  end_time DATETIME COMMENT '完成维修时间',
+  maintenance_cost DECIMAL(10, 2) DEFAULT 0 COMMENT '维修费用(元)',
+  maintenance_note TEXT COMMENT '维修备注',
+  record_date DATE NOT NULL DEFAULT (CURDATE()) COMMENT '记录日期',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_pile_id (pile_id),
+  INDEX idx_station_id (station_id),
+  INDEX idx_record_date (record_date),
+  INDEX idx_maintenance_status (maintenance_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充电桩维修记录表';
+
+-- 插入示例维修记录数据（CD1001的维修记录）
+INSERT INTO pile_maintenance_record 
+(pile_id, station_id, fault_type, fault_description, maintenance_type, maintenance_status, technician_name, start_time, end_time, maintenance_cost, maintenance_note, record_date) 
+VALUES
+('CD1001', 'VXZ10001', '电压异常', '充电桩电压波动较大，需要检查电路', 2, 3, '张师傅', '2026-02-01 09:00:00', '2026-02-01 11:30:00', 350.00, '更换了稳压器，测试正常', CURDATE()),
+('CD1001', 'VXZ10001', '定期保养', '季度例行保养检查', 1, 3, '李师傅', '2026-01-15 14:00:00', '2026-01-15 15:30:00', 150.00, '清洁设备，检查线路，一切正常', CURDATE()),
+('CD1007', 'VXZ10001', '通信故障', '充电桩无法与后台通信', 2, 3, '王师傅', '2026-02-02 10:00:00', '2026-02-02 12:00:00', 280.00, '更换通信模块，恢复正常', CURDATE()),
+('CD1017', 'VXZ10001', '显示屏故障', '显示屏黑屏无显示', 2, 2, '赵师傅', '2026-02-03 08:30:00', NULL, 0, '正在维修中，等待配件到货', CURDATE()),
+('CD1018', 'VXZ10001', '充电接口损坏', '充电接口松动，无法正常充电', 3, 1, NULL, NULL, NULL, 0, '待安排维修', CURDATE()),
+('CD1019', 'VXZ10001', '散热系统故障', '散热风扇不转，温度过高', 2, 1, NULL, NULL, NULL, 0, '已报修，等待维修人员', CURDATE())
+ON DUPLICATE KEY UPDATE 
+  fault_description = VALUES(fault_description),
+  maintenance_status = VALUES(maintenance_status);

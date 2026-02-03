@@ -404,6 +404,39 @@ export const getPileList = async (req, res) => {
         } else {
           pile.record = [];
         }
+
+        // 查询维修记录（查询最新日期的记录）
+        const [latestMaintenanceDate] = await pool.query(
+          `SELECT MAX(record_date) as latest_date 
+           FROM pile_maintenance_record 
+           WHERE pile_id = ?`,
+          [pile.id],
+        );
+
+        if (latestMaintenanceDate[0].latest_date) {
+          const [maintenanceRecords] = await pool.query(
+            `SELECT 
+              id,
+              fault_type as faultType,
+              fault_description as faultDescription,
+              maintenance_type as maintenanceType,
+              maintenance_status as maintenanceStatus,
+              technician_name as technician,
+              DATE_FORMAT(start_time, '%Y-%m-%d %H:%i') as startTime,
+              DATE_FORMAT(end_time, '%Y-%m-%d %H:%i') as endTime,
+              maintenance_cost as cost,
+              maintenance_note as note,
+              DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as createdAt
+            FROM pile_maintenance_record 
+            WHERE pile_id = ? AND record_date = ?
+            ORDER BY created_at DESC
+            LIMIT 10`,
+            [pile.id, latestMaintenanceDate[0].latest_date],
+          );
+          pile.maintenanceRecord = maintenanceRecords;
+        } else {
+          pile.maintenanceRecord = [];
+        }
       }
 
       result.push({

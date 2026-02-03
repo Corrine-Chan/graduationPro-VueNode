@@ -73,7 +73,98 @@
               <div>
                 <p class="fl ml">暂无预警</p>
                 <div class="fr" style="text-align: right">
-                  <el-button size="small">维修记录 </el-button>
+                  <el-popover
+                    placement="right"
+                    :width="400"
+                    trigger="click"
+                    popper-class="maintenance-popover"
+                  >
+                    <template #reference>
+                      <el-button
+                        size="small"
+                        @click="showMaintenanceRecord(item)"
+                        >维修记录</el-button
+                      >
+                    </template>
+                    <h3 style="margin-bottom: 16px">维修记录</h3>
+                    <div
+                      v-if="
+                        item.maintenanceRecord &&
+                        item.maintenanceRecord.length > 0
+                      "
+                    >
+                      <el-timeline>
+                        <el-timeline-item
+                          v-for="record in item.maintenanceRecord"
+                          :key="record.id"
+                          :timestamp="record.createdAt"
+                          :type="
+                            getMaintenanceStatusType(record.maintenanceStatus)
+                          "
+                          hollow
+                        >
+                          <div class="maintenance-item">
+                            <div class="maintenance-header">
+                              <el-tag
+                                :type="
+                                  getMaintenanceTypeTag(record.maintenanceType)
+                                "
+                                size="small"
+                              >
+                                {{
+                                  getMaintenanceTypeText(record.maintenanceType)
+                                }}
+                              </el-tag>
+                              <el-tag
+                                :type="
+                                  getMaintenanceStatusTag(
+                                    record.maintenanceStatus,
+                                  )
+                                "
+                                size="small"
+                                style="margin-left: 8px"
+                              >
+                                {{
+                                  getMaintenanceStatusText(
+                                    record.maintenanceStatus,
+                                  )
+                                }}
+                              </el-tag>
+                            </div>
+                            <p class="fault-type">
+                              <strong>{{ record.faultType }}</strong>
+                            </p>
+                            <p class="fault-desc">
+                              {{ record.faultDescription }}
+                            </p>
+                            <div
+                              v-if="record.technician"
+                              class="maintenance-info"
+                            >
+                              <p>维修师傅：{{ record.technician }}</p>
+                              <p v-if="record.startTime">
+                                开始时间：{{ record.startTime }}
+                              </p>
+                              <p v-if="record.endTime">
+                                完成时间：{{ record.endTime }}
+                              </p>
+                              <p v-if="record.cost > 0">
+                                维修费用：¥{{ record.cost }}
+                              </p>
+                            </div>
+                            <p v-if="record.note" class="maintenance-note">
+                              备注：{{ record.note }}
+                            </p>
+                          </div>
+                        </el-timeline-item>
+                      </el-timeline>
+                    </div>
+                    <el-empty
+                      v-else
+                      description="暂无维修记录"
+                      :image-size="80"
+                    />
+                  </el-popover>
                   <el-popover
                     placement="right"
                     :width="300"
@@ -202,6 +293,61 @@ const handleStationChange = () => {
 onMounted(() => {
   loadData();
 });
+
+// 显示维修记录
+const showMaintenanceRecord = (pile: any) => {
+  console.log("查看维修记录:", pile.id, pile.maintenanceRecord);
+};
+
+// 获取维修类型文本
+const getMaintenanceTypeText = (type: number) => {
+  const types: Record<number, string> = {
+    1: "日常维护",
+    2: "故障维修",
+    3: "紧急抢修",
+  };
+  return types[type] || "未知";
+};
+
+// 获取维修类型标签颜色
+const getMaintenanceTypeTag = (type: number) => {
+  const tags: Record<number, string> = {
+    1: "info",
+    2: "warning",
+    3: "danger",
+  };
+  return tags[type] || "";
+};
+
+// 获取维修状态文本
+const getMaintenanceStatusText = (status: number) => {
+  const statuses: Record<number, string> = {
+    1: "待维修",
+    2: "维修中",
+    3: "已完成",
+  };
+  return statuses[status] || "未知";
+};
+
+// 获取维修状态标签颜色
+const getMaintenanceStatusTag = (status: number) => {
+  const tags: Record<number, string> = {
+    1: "warning",
+    2: "primary",
+    3: "success",
+  };
+  return tags[status] || "";
+};
+
+// 获取维修状态时间线类型
+const getMaintenanceStatusType = (status: number) => {
+  const types: Record<number, string> = {
+    1: "warning",
+    2: "primary",
+    3: "success",
+  };
+  return types[status] || "info";
+};
 </script>
 
 <style lang="less" scoped>
@@ -257,6 +403,66 @@ onMounted(() => {
     .el-timeline-item:last-child {
       padding-bottom: 0;
       margin-bottom: 0;
+    }
+  }
+}
+
+// 维修记录 Popover 样式
+.maintenance-popover {
+  padding: 16px 16px 8px 16px !important;
+  max-height: 500px;
+  overflow-y: auto;
+
+  .el-timeline {
+    margin: 0;
+    padding: 0;
+
+    .el-timeline-item:last-child {
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .maintenance-item {
+    font-size: 13px;
+    line-height: 1.6;
+
+    .maintenance-header {
+      margin-bottom: 8px;
+    }
+
+    .fault-type {
+      margin: 8px 0 4px 0;
+      font-size: 14px;
+      color: #303133;
+    }
+
+    .fault-desc {
+      margin: 4px 0;
+      color: #606266;
+    }
+
+    .maintenance-info {
+      margin: 8px 0;
+      padding: 8px;
+      background-color: #f5f7fa;
+      border-radius: 4px;
+      font-size: 12px;
+
+      p {
+        margin: 4px 0;
+        color: #606266;
+      }
+    }
+
+    .maintenance-note {
+      margin: 8px 0 0 0;
+      padding: 8px;
+      background-color: #fef0f0;
+      border-left: 3px solid #f56c6c;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #606266;
     }
   }
 }
