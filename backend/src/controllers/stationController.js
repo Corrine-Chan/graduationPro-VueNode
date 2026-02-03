@@ -212,6 +212,23 @@ export const getRevenueList = async (req, res) => {
   try {
     const { page = 1, pageSize = 10, name = "" } = req.body;
 
+    // 先获取最新的统计日期
+    const [latestDate] = await pool.query(
+      "SELECT MAX(stat_date) as latest_date FROM station_revenue",
+    );
+
+    if (!latestDate[0].latest_date) {
+      // 如果没有任何数据，返回空列表
+      return res.json({
+        code: 200,
+        success: true,
+        data: {
+          list: [],
+          total: 0,
+        },
+      });
+    }
+
     // 构建查询条件
     let whereConditions = [];
     let queryParams = [];
@@ -222,8 +239,9 @@ export const getRevenueList = async (req, res) => {
       queryParams.push(`%${name}%`);
     }
 
-    // 只查询当前日期的数据
-    whereConditions.push("stat_date = CURDATE()");
+    // 查询最新日期的数据（而不是强制查询当天）
+    whereConditions.push("stat_date = ?");
+    queryParams.push(latestDate[0].latest_date);
 
     const whereClause =
       whereConditions.length > 0
