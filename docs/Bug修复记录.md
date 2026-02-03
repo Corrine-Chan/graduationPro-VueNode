@@ -2,6 +2,15 @@
 
 本文档记录项目开发过程中遇到的所有Bug及其修复方案，便于后续维护和问题追溯。
 
+**统计信息**：
+
+- 总Bug数：4个
+- 已修复：4个
+- 修复中：0个
+- 待修复：0个
+
+**最后更新**：2026-02-03
+
 ---
 
 ## Bug #001: 充电桩管理模块筛选功能异常
@@ -347,6 +356,537 @@ const ruleForm = ref<RowType>({
 2. **数据一致性**：确保所有相关位置的默认值保持一致
 3. **用户体验**：避免在表单中提供无意义或容易误操作的选项
 4. **状态设计**：特殊状态值（如"全部"）应该只用于查询，不应该作为实体数据的状态
+
+---
+
+## Bug #003: 营收统计模块数据为空
+
+**修复日期**: 2026-02-03  
+**影响模块**: 充电站管理 > 营收统计  
+**严重程度**: 高  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+在营收统计页面，表格显示"无数据"，但数据库中实际存在营收统计数据。具体表现为：
+
+1. **表格为空**：营收统计表格不显示任何数据
+2. **图表正常**：顶部的统计卡片和图表能正常显示
+3. **数据库有数据**：检查数据库 `station_revenue` 表，确认有42条数据
+4. **日期不匹配**：数据库中的数据日期是 `2026-02-01`，而当前日期是 `2026-02-03`
+
+### 问题原因
+
+后端查询逻辑存在缺陷，强制查询当天日期的数据：
+
+```javascript
+// 问题代码
+whereConditions.push("stat_date = CURDATE()");
+```
+
+这导致：
+
+- 只能查询到当天的数据
+- 如果数据库中没有当天的数据，就会返回空列表
+- 每天都需要手动在数据库中插入新数据
+- 演示环境下，历史数据无法显示
+
+**根本原因**：系统设计时假设每天都会自动生成新数据，但实际上演示环境没有配置定时任务，导致数据日期停留在初始化时的日期。
+
+### 修复方案
+
+#### 1. 优化后端查询逻辑
+
+修改 `backend/src/controllers/stationController.js` 中的 `getRevenueList` 函数，改为查询最新日期的数据：
+
+**修改前**：
+
+```javascript
+// 只查询当前日期的数据
+whereConditions.push("stat_date = CURDATE()");
+```
+
+**修改后**：
+
+```javascript
+// 先获取最新的统计日期
+const [latestDate] = await pool.query(
+  "SELECT MAX(stat_date) as latest_date FROM station_revenue",
+);
+
+if (!latestDate[0].latest_date) {
+  // 如果没有任何数据，返回空列表
+  return res.json({
+    code: 200,
+    success: true,
+    data: { list: [], total: 0 },
+  });
+}
+
+// 查询最新日期的数据（而不是强制查询当天）
+whereConditions.push("stat_date = ?");
+queryParams.push(latestDate[0].latest_date);
+```
+
+**优化效果**：
+
+- ✅ 自动查询最新日期的数据
+- ✅ 即使数据不是今天的，也能正常显示
+- ✅ 不需要每天手动更新数据日期
+- ✅ 演示环境更友好
+
+#### 2. 创建数据管理脚本
+
+为了方便数据维护，创建了3个实用脚本：
+
+##### 2.1 checkRevenueData.js - 查看数据概况
+
+```bash
+node scripts/checkRevenueData.js
+```
+
+功能：
+
+- 显示每个日期有多少条数据
+- 显示最新的数据日期
+- 对比今天日期，提示是否需要更新
+
+##### 2.2 updateRevenueDate.js - 更新数据日期
+
+```bash
+node scripts/updateRevenueDate.js
+```
+
+功能：
+
+- 将所有营收数据的日期更新为今天
+- 不修改营收金额，只改日期
+- 适用于演示环境快速更新
+
+##### 2.3 generateDailyRevenue.js - 生成每日数据
+
+```bash
+# 生成今天的数据
+node scripts/generateDailyRevenue.js
+
+# 生成指定日期的数据
+node scripts/generateDailyRevenue.js 2026-02-04
+```
+
+功能：
+
+- 为所有充电站生成指定日期的营收数据
+- 自动读取充电站信息
+- 随机生成合理的营收数据（模拟真实业务）
+
+#### 3. 更新数据库数据
+
+执行脚本更新数据日期：
+
+```bash
+cd backend
+node scripts/updateRevenueDate.js
+```
+
+更新结果：42条数据的日期从 `2026-02-01` 更新为 `2026-02-03`
+
+### 修复文件清单
+
+| 文件路径                                       | 修改类型 | 说明                           |
+| ---------------------------------------------- | -------- | ------------------------------ |
+| `backend/src/controllers/stationController.js` | 修改     | 优化查询逻辑，查询最新日期数据 |
+| `backend/scripts/checkRevenueData.js`          | 新增     | 查看营收数据概况脚本           |
+| `backend/scripts/updateRevenueDate.js`         | 新增     | 更新数据日期脚本               |
+| `backend/scripts/generateDailyRevenue.js`      | 新增     | 生成每日营收数据脚本           |
+| `backend/scripts/脚本使用说明.md`              | 新增     | 脚本使用说明文档               |
+| `docs/营收数据管理说明.md`                     | 新增     | 营收数据管理详细文档           |
+
+### 测试验证
+
+#### 测试用例1：数据显示功能
+
+- ✅ 营收统计表格正常显示数据
+- ✅ 显示最新日期的数据（即使不是今天）
+- ✅ 分页功能正常
+- ✅ 搜索功能正常
+
+#### 测试用例2：数据管理脚本
+
+- ✅ checkRevenueData.js 正确显示数据统计
+- ✅ updateRevenueDate.js 成功更新数据日期
+- ✅ generateDailyRevenue.js 成功生成新数据
+
+#### 测试用例3：边界情况
+
+- ✅ 数据库为空时，返回空列表而不是报错
+- ✅ 多个日期的数据存在时，只显示最新日期的数据
+- ✅ 切换站点搜索时，查询逻辑正常
+
+### 技术要点总结
+
+#### 数据查询最佳实践
+
+1. **避免硬编码日期条件**：
+   - ❌ 不好：`WHERE date = CURDATE()`
+   - ✅ 更好：`WHERE date = (SELECT MAX(date) FROM table)`
+
+2. **处理空数据情况**：
+
+   ```javascript
+   if (!latestDate[0].latest_date) {
+     return res.json({ data: { list: [], total: 0 } });
+   }
+   ```
+
+3. **灵活的查询策略**：
+   - 优先查询最新数据
+   - 提供数据管理工具
+   - 支持手动指定日期
+
+#### 演示环境数据管理
+
+1. **提供数据维护脚本**：方便快速更新数据
+2. **文档化操作流程**：降低维护成本
+3. **自动化建议**：生产环境应配置定时任务
+
+### 预防措施
+
+#### 1. 生产环境建议
+
+配置定时任务（cron job）每天自动生成营收数据：
+
+```javascript
+// 每天凌晨1点执行
+// cron: '0 1 * * *'
+
+async function generateDailyRevenue() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // 从订单表统计昨天的营收
+  const revenue = await pool.query(
+    `
+    SELECT 
+      s.station_id,
+      s.station_name,
+      SUM(o.amount) as total_revenue
+    FROM charging_orders o
+    JOIN charging_stations s ON o.station_id = s.id
+    WHERE DATE(o.created_at) = ?
+    GROUP BY s.station_id
+  `,
+    [yesterday],
+  );
+
+  // 插入到营收统计表
+  // ...
+}
+```
+
+#### 2. 代码审查检查点
+
+- 避免使用 `CURDATE()` 等硬编码日期函数
+- 查询前先检查数据是否存在
+- 提供合理的默认值和空数据处理
+
+#### 3. 监控告警
+
+- 监控营收数据是否每天更新
+- 数据异常时发送告警通知
+- 定期检查数据完整性
+
+### 相关文档
+
+- [营收统计模块文档](./营收统计模块.md)
+- [营收数据管理说明](./营收数据管理说明.md)
+- [脚本使用说明](../backend/scripts/脚本使用说明.md)
+
+### 经验教训
+
+1. **查询设计**：不要假设数据一定存在或一定是最新的，应该设计灵活的查询逻辑
+2. **演示环境**：演示环境应该提供便捷的数据管理工具，而不是依赖自动化
+3. **文档化**：数据维护流程应该文档化，方便其他开发者理解和操作
+4. **测试覆盖**：应该测试边界情况（空数据、历史数据等）
+
+---
+
+## Bug #004: 充电桩使用记录为空
+
+**修复日期**: 2026-02-03  
+**影响模块**: 充电站管理 > 充电桩管理  
+**严重程度**: 中等  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+在充电桩管理页面，点击"使用记录"按钮后，弹框中显示为空，但数据库中实际存在使用记录数据。具体表现为：
+
+1. **使用记录为空**：点击任意充电桩的"使用记录"按钮，弹框中没有显示任何记录
+2. **数据库有数据**：检查数据库 `pile_usage_record` 表，确认有12条使用记录
+3. **日期不匹配**：数据库中的记录日期是 `2026-02-01`，而当前日期是 `2026-02-03`
+4. **与Bug #003类似**：同样是日期查询条件导致的问题
+
+### 问题原因
+
+后端查询逻辑与营收统计模块存在相同的问题，强制查询当天日期的记录：
+
+```javascript
+// 问题代码
+const [records] = await pool.query(
+  `SELECT ... FROM pile_usage_record 
+   WHERE pile_id = ? AND record_date = CURDATE()
+   ...`,
+  [pile.id],
+);
+```
+
+这导致：
+
+- 只能查询到当天的使用记录
+- 如果数据库中没有当天的记录，就会返回空数组
+- 历史记录无法显示
+- 演示环境下用户体验差
+
+**根本原因**：与Bug #003相同，系统设计时假设每天都会有新的使用记录，但演示环境没有实际的充电订单产生。
+
+### 修复方案
+
+#### 1. 优化后端查询逻辑
+
+修改 `backend/src/controllers/stationController.js` 中的 `getPileList` 函数，改为查询每个充电桩最新日期的记录：
+
+**修改前**：
+
+```javascript
+// 为每个充电桩查询使用记录
+for (const pile of piles) {
+  const [records] = await pool.query(
+    `SELECT ... FROM pile_usage_record 
+     WHERE pile_id = ? AND record_date = CURDATE()
+     ...`,
+    [pile.id],
+  );
+  pile.record = records;
+}
+```
+
+**修改后**：
+
+```javascript
+// 为每个充电桩查询使用记录（查询最新日期的记录）
+for (const pile of piles) {
+  // 先获取该充电桩最新的记录日期
+  const [latestDate] = await pool.query(
+    `SELECT MAX(record_date) as latest_date 
+     FROM pile_usage_record 
+     WHERE pile_id = ?`,
+    [pile.id],
+  );
+
+  // 如果有记录，查询最新日期的记录
+  if (latestDate[0].latest_date) {
+    const [records] = await pool.query(
+      `SELECT ... FROM pile_usage_record 
+       WHERE pile_id = ? AND record_date = ?
+       ...`,
+      [pile.id, latestDate[0].latest_date],
+    );
+    pile.record = records;
+  } else {
+    pile.record = [];
+  }
+}
+```
+
+**优化效果**：
+
+- ✅ 自动查询每个充电桩最新日期的记录
+- ✅ 即使记录不是今天的，也能正常显示
+- ✅ 没有记录时返回空数组，不会报错
+- ✅ 演示环境更友好
+
+#### 2. 创建记录管理脚本
+
+为了方便记录维护，创建了2个实用脚本：
+
+##### 2.1 checkPileRecords.js - 查看记录概况
+
+```bash
+node scripts/checkPileRecords.js
+```
+
+功能：
+
+- 显示每个日期有多少条使用记录
+- 显示最新的记录日期
+- 对比今天日期，提示是否需要更新
+
+##### 2.2 updatePileRecordDate.js - 更新记录日期
+
+```bash
+node scripts/updatePileRecordDate.js
+```
+
+功能：
+
+- 将所有充电桩使用记录的日期更新为今天
+- 不修改记录内容，只改日期
+- 适用于演示环境快速更新
+
+#### 3. 更新数据库数据
+
+执行脚本更新记录日期：
+
+```bash
+cd backend
+node scripts/updatePileRecordDate.js
+```
+
+更新结果：12条记录的日期从 `2026-02-01` 更新为 `2026-02-03`
+
+#### 4. 优化弹框样式
+
+顺便优化了使用记录弹框的样式，减少底部空白：
+
+```vue
+<!-- 添加自定义类名 -->
+<el-popover popper-class="record-popover">
+  ...
+</el-popover>
+```
+
+```less
+// 减少底部内边距
+.record-popover {
+  padding: 16px 16px 8px 16px !important;
+
+  .el-timeline-item:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+}
+```
+
+### 修复文件清单
+
+| 文件路径                                       | 修改类型 | 说明                           |
+| ---------------------------------------------- | -------- | ------------------------------ |
+| `backend/src/controllers/stationController.js` | 修改     | 优化查询逻辑，查询最新日期记录 |
+| `backend/scripts/checkPileRecords.js`          | 新增     | 查看充电桩使用记录概况脚本     |
+| `backend/scripts/updatePileRecordDate.js`      | 新增     | 更新使用记录日期脚本           |
+| `backend/scripts/脚本使用说明.md`              | 修改     | 添加充电桩记录管理部分         |
+| `frontend/src/views/chargingstation/Fault.vue` | 修改     | 优化弹框样式，减少底部空白     |
+
+### 测试验证
+
+#### 测试用例1：使用记录显示
+
+- ✅ 点击"使用记录"按钮，弹框正常显示记录
+- ✅ 显示最新日期的记录（即使不是今天）
+- ✅ 时间线格式正确
+- ✅ 没有记录的充电桩显示空列表
+
+#### 测试用例2：记录管理脚本
+
+- ✅ checkPileRecords.js 正确显示记录统计
+- ✅ updatePileRecordDate.js 成功更新记录日期
+
+#### 测试用例3：样式优化
+
+- ✅ 弹框底部空白减少
+- ✅ 内容垂直居中更合理
+- ✅ 时间线显示紧凑
+
+### 技术要点总结
+
+#### 查询优化策略
+
+1. **分步查询**：
+
+   ```javascript
+   // 第一步：查询最新日期
+   const [latestDate] = await pool.query(
+     "SELECT MAX(record_date) as latest_date FROM pile_usage_record WHERE pile_id = ?",
+     [pile.id],
+   );
+
+   // 第二步：根据最新日期查询记录
+   if (latestDate[0].latest_date) {
+     const [records] = await pool.query(
+       "SELECT ... WHERE pile_id = ? AND record_date = ?",
+       [pile.id, latestDate[0].latest_date],
+     );
+   }
+   ```
+
+2. **空值处理**：
+   ```javascript
+   pile.record = latestDate[0].latest_date ? records : [];
+   ```
+
+#### Popover样式调整
+
+1. **使用popper-class**：因为Popover挂载到body下，需要用全局样式
+2. **减少内边距**：调整padding值减少空白
+3. **移除最后一项间距**：优化视觉效果
+
+### 预防措施
+
+#### 1. 统一查询策略
+
+建议在项目中统一日期查询策略：
+
+```javascript
+// 创建通用的"查询最新数据"函数
+async function getLatestRecords(tableName, dateColumn, conditions) {
+  // 1. 查询最新日期
+  const [latestDate] = await pool.query(
+    `SELECT MAX(${dateColumn}) as latest_date FROM ${tableName} WHERE ${conditions}`,
+  );
+
+  // 2. 查询最新日期的数据
+  if (latestDate[0].latest_date) {
+    return await pool.query(
+      `SELECT * FROM ${tableName} WHERE ${conditions} AND ${dateColumn} = ?`,
+      [latestDate[0].latest_date],
+    );
+  }
+
+  return [];
+}
+```
+
+#### 2. 代码复用
+
+Bug #003 和 Bug #004 是相同类型的问题，应该：
+
+- 提取公共查询逻辑
+- 统一数据管理脚本
+- 建立代码审查规范
+
+#### 3. 快速修复命令
+
+为演示环境提供一键更新所有数据日期的命令：
+
+```bash
+# 一次性更新所有数据日期
+cd backend
+node scripts/updateRevenueDate.js
+node scripts/updatePileRecordDate.js
+```
+
+### 相关文档
+
+- [充电桩管理模块文档](./充电桩管理模块.md)
+- [脚本使用说明](../backend/scripts/脚本使用说明.md)
+- [营收数据管理说明](./营收数据管理说明.md)
+
+### 经验教训
+
+1. **相似问题识别**：发现一个日期查询问题后，应该检查整个项目是否有类似问题
+2. **统一解决方案**：相同类型的问题应该使用统一的解决方案，避免重复劳动
+3. **工具化思维**：提供便捷的数据管理工具，提升开发和演示效率
+4. **样式细节**：用户体验不仅包括功能，也包括视觉细节（如弹框空白）
 
 ---
 

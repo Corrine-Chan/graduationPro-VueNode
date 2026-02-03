@@ -74,14 +74,19 @@
                 <p class="fl ml">暂无预警</p>
                 <div class="fr" style="text-align: right">
                   <el-button size="small">维修记录 </el-button>
-                  <el-popover placement="right" :width="300" trigger="click">
+                  <el-popover
+                    placement="right"
+                    :width="300"
+                    trigger="click"
+                    popper-class="record-popover"
+                  >
                     <template #reference>
                       <el-button size="small" type="primary" class="mr"
                         >使用记录</el-button
                       >
                     </template>
-                    <h3 class="mb">使用记录</h3>
-                    <el-timeline style="max-width: 600px">
+                    <h3 style="margin-bottom: 16px">使用记录</h3>
+                    <el-timeline>
                       <el-timeline-item
                         :timestamp="j.time"
                         v-for="j in item.record"
@@ -234,6 +239,25 @@ onMounted(() => {
     height: 2px;
     width: 95%;
     margin: auto;
+  }
+}
+
+// 使用记录 Popover 样式（全局样式，不使用 scoped）
+</style>
+
+<style lang="less">
+.record-popover {
+  padding: 16px 16px 8px 16px !important; // 减少底部内边距 上右下左
+
+  .el-timeline {
+    margin: 0;
+    padding: 0;
+
+    // 移除最后一个时间线项的底部间距
+    .el-timeline-item:last-child {
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
   }
 }
 </style>

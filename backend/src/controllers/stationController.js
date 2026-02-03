@@ -378,19 +378,32 @@ export const getPileList = async (req, res) => {
         [station.id],
       );
 
-      // 为每个充电桩查询使用记录
+      // 为每个充电桩查询使用记录（查询最新日期的记录）
       for (const pile of piles) {
-        const [records] = await pool.query(
-          `SELECT 
-            DATE_FORMAT(record_time, '%H:%i:%s') as time,
-            CONCAT('充电', energy_consumed, '度，消费', amount, '元') as msg
-          FROM pile_usage_record 
-          WHERE pile_id = ? AND record_date = CURDATE()
-          ORDER BY record_time DESC
-          LIMIT 10`,
+        // 先获取该充电桩最新的记录日期
+        const [latestDate] = await pool.query(
+          `SELECT MAX(record_date) as latest_date 
+           FROM pile_usage_record 
+           WHERE pile_id = ?`,
           [pile.id],
         );
-        pile.record = records;
+
+        // 如果有记录，查询最新日期的记录
+        if (latestDate[0].latest_date) {
+          const [records] = await pool.query(
+            `SELECT 
+              DATE_FORMAT(record_time, '%H:%i:%s') as time,
+              CONCAT('充电', energy_consumed, '度，消费', amount, '元') as msg
+            FROM pile_usage_record 
+            WHERE pile_id = ? AND record_date = ?
+            ORDER BY record_time DESC
+            LIMIT 10`,
+            [pile.id, latestDate[0].latest_date],
+          );
+          pile.record = records;
+        } else {
+          pile.record = [];
+        }
       }
 
       result.push({
