@@ -1,9 +1,10 @@
-import { post } from "@/utils/http";
+import { post, get } from "@/utils/http";
 import type { CreateStationParams } from "@/types/station";
 
 const Api = {
-  MapList: "/mapList",
-  CreateStation: "/station/create",
+  MapList: "/api/map/mapList",
+  CreateStation: "/api/map/create",
+  MapStats: "/api/map/stats",
 };
 
 function mapListApi() {
@@ -14,4 +15,8 @@ function createStationApi(data: CreateStationParams) {
   return post(Api.CreateStation, data);
 }
 
-export { mapListApi, createStationApi };
+function mapStatsApi() {
+  return get(Api.MapStats);
+}
+
+export { mapListApi, createStationApi, mapStatsApi };

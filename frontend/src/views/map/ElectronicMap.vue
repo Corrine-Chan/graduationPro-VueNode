@@ -2,26 +2,50 @@
   <el-row :gutter="20">
     <el-col :span="18">
       <el-card>
-        <MapContainer />
+        <MapContainer :refresh-trigger="refreshTrigger" />
       </el-card>
     </el-col>
     <el-col :span="6">
       <el-card class="des">
-        <div>1.累计充电站数量：<el-text type="primary">34个</el-text></div>
         <div>
-          2.单省份最多充电桩：<el-text type="primary">北京(4个)</el-text>
-        </div>
-        <div>3.充电站遍及省份：<el-text type="primary">14个</el-text></div>
-        <div>4.暂无充电站省份：<el-text type="primary">22个</el-text></div>
-        <div>5.累计充电站：<el-text type="primary">北京(4个)</el-text></div>
-        <div>
-          6.单日营收最高：<el-text type="primary">北京西单充电站</el-text>
+          1.累计充电站数量：<el-text type="primary"
+            >{{ stats.totalStations }}个</el-text
+          >
         </div>
         <div>
-          7.单日营收最低：<el-text type="primary">南宁青秀山充电站</el-text>
+          2.单省份最多充电桩：<el-text type="primary">{{
+            stats.maxProvinceStations
+          }}</el-text>
         </div>
         <div>
-          8.故障率最高：<el-text type="primary">兰州黄河桥充电站</el-text>
+          3.充电站遍及省份：<el-text type="primary"
+            >{{ stats.provinceCount }}个</el-text
+          >
+        </div>
+        <div>
+          4.暂无充电站省份：<el-text type="primary"
+            >{{ stats.noStationProvinces }}个</el-text
+          >
+        </div>
+        <div>
+          5.累计充电站：<el-text type="primary"
+            >{{ stats.totalStations }}个</el-text
+          >
+        </div>
+        <div>
+          6.单日营收最高：<el-text type="primary">{{
+            stats.revenueHighest
+          }}</el-text>
+        </div>
+        <div>
+          7.单日营收最低：<el-text type="primary">{{
+            stats.revenueLowest
+          }}</el-text>
+        </div>
+        <div>
+          8.故障率最高：<el-text type="primary">{{
+            stats.faultHighest
+          }}</el-text>
         </div>
       </el-card>
       <el-card class="mt">
@@ -65,6 +89,15 @@
               clearable
             />
           </el-form-item>
+          <el-form-item label="充电桩数量" prop="pileCount">
+            <el-input-number
+              v-model="form.pileCount"
+              :min="0"
+              :max="500"
+              placeholder="请输入充电桩数量"
+              style="width: 100%"
+            />
+          </el-form-item>
           <el-form-item label="立即使用">
             <el-switch v-model="form.isActive" />
           </el-form-item>
@@ -92,15 +125,27 @@
 
 <script setup lang="ts">
 import MapContainer from "@/components/map/MapContainer.vue";
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
-import { createStationApi } from "@/api/map";
+import { createStationApi, mapStatsApi } from "@/api/map";
 import type { StationFormData, CreateStationParams } from "@/types/station";
 import { useUserStore } from "@/store/auth";
 
 const userStore = useUserStore();
 const formRef = ref<FormInstance>();
 const loading = ref(false);
+const refreshTrigger = ref(0); // 用于触发地图刷新
+
+// 统计数据
+const stats = ref({
+  totalStations: 34,
+  maxProvinceStations: "北京(4个)",
+  provinceCount: 14,
+  noStationProvinces: 22,
+  revenueHighest: "北京西单充电站",
+  revenueLowest: "南宁青秀山充电站",
+  faultHighest: "兰州黄河桥充电站",
+});
 
 // 表单数据
 const form = reactive<StationFormData>({
@@ -108,7 +153,8 @@ const form = reactive<StationFormData>({
   region: "",
   longitude: 0,
   latitude: 0,
-  isActive: false,
+  pileCount: 0,
+  isActive: true, // 默认启用，这样新创建的站点会立即显示在地图上
   remarks: "",
 });
 
@@ -152,7 +198,27 @@ const rules = reactive<FormRules<StationFormData>>({
     { required: true, validator: validateLongitude, trigger: "blur" },
   ],
   latitude: [{ required: true, validator: validateLatitude, trigger: "blur" }],
+  pileCount: [
+    { required: true, message: "请输入充电桩数量", trigger: "blur" },
+    {
+      type: "number",
+      min: 0,
+      max: 500,
+      message: "充电桩数量应在0到500之间",
+      trigger: "blur",
+    },
+  ],
 });
+
+// 加载统计数据
+const loadStats = async () => {
+  try {
+    const { data } = await mapStatsApi();
+    stats.value = data;
+  } catch (error) {
+    console.error("加载统计数据失败:", error);
+  }
+};
 
 // 提交表单
 const handleSubmit = async () => {
@@ -181,9 +247,16 @@ const handleSubmit = async () => {
 
     // 重置表单
     handleReset();
+
+    // 刷新地图和统计数据
+    refreshTrigger.value++;
+    loadStats();
   } catch (error: any) {
     console.error("创建站点失败:", error);
-    ElMessage.error(error.message || "创建站点失败，请重试");
+    if (error !== false) {
+      // 表单验证失败时不显示错误消息
+      ElMessage.error(error.message || "创建站点失败，请重试");
+    }
   } finally {
     loading.value = false;
   }
@@ -201,10 +274,16 @@ const handleReset = () => {
     region: "",
     longitude: 0,
     latitude: 0,
-    isActive: false,
+    pileCount: 0,
+    isActive: true, // 默认启用
     remarks: "",
   });
 };
+
+// 组件挂载时加载统计数据
+onMounted(() => {
+  loadStats();
+});
 </script>
 
 <style scoped>

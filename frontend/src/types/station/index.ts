@@ -17,6 +17,7 @@ interface StationFormData {
   region: string; // 站点地址
   longitude: number; // 经度
   latitude: number; // 纬度
+  pileCount: number; // 充电桩数量
   isActive: boolean; // 立即使用
   remarks: string; // 备注
 }

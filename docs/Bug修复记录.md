@@ -4,12 +4,12 @@
 
 **统计信息**：
 
-- 总Bug数：4个
-- 已修复：4个
+- 总Bug数：5个
+- 已修复：5个
 - 修复中：0个
 - 待修复：0个
 
-**最后更新**：2026-02-03
+**最后更新**：2026-02-04
 
 ---
 
@@ -887,6 +887,256 @@ node scripts/updatePileRecordDate.js
 2. **统一解决方案**：相同类型的问题应该使用统一的解决方案，避免重复劳动
 3. **工具化思维**：提供便捷的数据管理工具，提升开发和演示效率
 4. **样式细节**：用户体验不仅包括功能，也包括视觉细节（如弹框空白）
+
+---
+
+## Bug #005: 电子地图站点图标不显示
+
+**修复日期**: 2026-02-04  
+**影响模块**: 电子地图  
+**严重程度**: 中等  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+在电子地图模块中，创建新站点（如南昌滕王阁充电站）后，地图上没有显示 flashIcon 图标。具体表现为：
+
+1. **站点创建成功**：后端成功创建站点，数据库中有记录
+2. **图标不显示**：地图上看不到新创建站点的图标
+3. **数据存在**：数据库中确认站点数据存在（VXZ10034 南昌滕王阁充电站）
+4. **其他站点正常**：其他站点的图标显示正常
+
+### 问题原因
+
+后端查询逻辑存在限制条件，只返回 `is_active = 1` 的站点：
+
+```javascript
+// 问题代码
+const query = `
+  SELECT ... FROM map_stations
+  WHERE is_active = 1
+  ORDER BY created_at DESC
+`;
+```
+
+而前端创建站点表单中，"立即使用"开关默认是关闭的（`isActive: false`），导致：
+
+- 新创建的站点 `is_active` 字段为 0（未启用）
+- 后端查询时被过滤掉，不返回给前端
+- 地图上无法显示该站点的图标
+
+**根本原因**：前端表单默认值与业务逻辑不匹配。用户创建站点的意图是让站点立即显示在地图上，但默认的 `isActive: false` 导致站点被隐藏。
+
+### 修复方案
+
+#### 1. 修改前端默认行为
+
+修改 `frontend/src/views/map/ElectronicMap.vue`，将"立即使用"开关默认改为开启：
+
+**修改前**：
+
+```typescript
+const form = reactive<StationFormData>({
+  name: "",
+  region: "",
+  longitude: 0,
+  latitude: 0,
+  pileCount: 0,
+  isActive: false, // 默认关闭
+  remarks: "",
+});
+```
+
+**修改后**：
+
+```typescript
+const form = reactive<StationFormData>({
+  name: "",
+  region: "",
+  longitude: 0,
+  latitude: 0,
+  pileCount: 0,
+  isActive: true, // 默认开启，新站点立即显示
+  remarks: "",
+});
+```
+
+同时修改重置表单时的默认值：
+
+```typescript
+Object.assign(form, {
+  name: "",
+  region: "",
+  longitude: 0,
+  latitude: 0,
+  pileCount: 0,
+  isActive: true, // 默认开启
+  remarks: "",
+});
+```
+
+#### 2. 启用已创建的南昌站点
+
+创建脚本 `backend/scripts/enableNanchangStation.js` 启用南昌站点：
+
+```javascript
+const [result] = await db.query(`
+  UPDATE map_stations 
+  SET is_active = 1, status = 2
+  WHERE station_id = 'VXZ10034'
+`);
+```
+
+执行结果：
+
+- ✅ 南昌滕王阁充电站已启用（is_active: 0 → 1）
+- ✅ 状态更新为使用中（status: 1 → 2）
+- ✅ 地图上立即显示图标
+
+#### 3. 创建检查脚本
+
+创建 `backend/scripts/checkNanchangStation.js` 用于检查站点状态：
+
+```javascript
+const [stations] = await db.query(`
+  SELECT 
+    station_id, station_name, address,
+    longitude, latitude, status,
+    pile_count, is_active, created_at
+  FROM map_stations
+  WHERE station_name LIKE '%南昌%' OR address LIKE '%南昌%'
+  ORDER BY created_at DESC
+`);
+```
+
+功能：
+
+- 显示南昌相关站点的详细信息
+- 检查 `is_active` 状态
+- 提示未启用的站点
+
+### 修复文件清单
+
+| 文件路径                                   | 修改类型 | 说明                                 |
+| ------------------------------------------ | -------- | ------------------------------------ |
+| `frontend/src/views/map/ElectronicMap.vue` | 修改     | 修改 isActive 默认值为 true          |
+| `backend/scripts/enableNanchangStation.js` | 新增     | 启用南昌站点脚本（已执行后删除）     |
+| `backend/scripts/checkNanchangStation.js`  | 新增     | 检查南昌站点状态脚本（已执行后删除） |
+
+### 测试验证
+
+#### 测试用例1：查看南昌站点
+
+- ✅ 执行检查脚本，确认站点存在
+- ✅ 确认 `is_active = 0`（未启用）
+- ✅ 确认站点信息完整（经纬度、充电桩数量等）
+
+#### 测试用例2：启用南昌站点
+
+- ✅ 执行启用脚本
+- ✅ 数据库更新成功（is_active: 0 → 1）
+- ✅ 状态更新为使用中（status: 1 → 2）
+
+#### 测试用例3：地图显示
+
+- ✅ 刷新地图页面
+- ✅ 南昌位置显示 flashIcon 图标
+- ✅ 点击图标显示站点信息
+- ✅ 显示内容正确（名称、充电桩数量、状态）
+
+#### 测试用例4：创建新站点
+
+- ✅ "立即使用"开关默认开启
+- ✅ 创建新站点
+- ✅ 站点立即显示在地图上
+- ✅ 不需要手动启用
+
+### 技术要点总结
+
+#### 业务逻辑设计
+
+1. **默认值选择**：
+   - 考虑用户的主要使用场景
+   - 创建站点通常是为了立即使用
+   - 默认值应该符合大多数用户的预期
+
+2. **数据状态管理**：
+   - `is_active` 字段控制站点是否显示
+   - 后端查询时过滤未启用的站点
+   - 提供管理工具方便启用/禁用站点
+
+#### 问题排查方法
+
+1. **检查数据库**：
+   - 确认数据是否存在
+   - 检查关键字段的值（is_active、status等）
+   - 对比正常数据和异常数据的差异
+
+2. **检查后端逻辑**：
+   - 查看查询条件（WHERE子句）
+   - 确认是否有过滤条件
+   - 验证返回的数据
+
+3. **检查前端逻辑**：
+   - 查看表单默认值
+   - 确认提交的数据
+   - 验证地图渲染逻辑
+
+### 预防措施
+
+#### 1. 表单设计原则
+
+- 默认值应该符合用户预期
+- 重要开关应该有明确的说明
+- 考虑添加提示信息
+
+#### 2. 数据一致性检查
+
+建议添加数据一致性检查脚本：
+
+```javascript
+// 检查未启用的站点
+const [inactiveStations] = await db.query(`
+  SELECT station_id, station_name, created_at
+  FROM map_stations
+  WHERE is_active = 0
+  ORDER BY created_at DESC
+`);
+
+if (inactiveStations.length > 0) {
+  console.log("⚠️  以下站点未启用：");
+  inactiveStations.forEach((s) => {
+    console.log(`  - ${s.station_name} (${s.station_id})`);
+  });
+}
+```
+
+#### 3. 用户提示
+
+在创建站点表单中添加提示：
+
+```vue
+<el-form-item label="立即使用">
+  <el-switch v-model="form.isActive" />
+  <el-text type="info" size="small">
+    关闭后站点不会显示在地图上
+  </el-text>
+</el-form-item>
+```
+
+### 相关文档
+
+- [电子地图模块说明](./电子地图模块说明.md)
+- [电子地图测试指南](./电子地图测试指南.md)
+- [电子地图问题排查指南](./电子地图问题排查指南.md)
+
+### 经验教训
+
+1. **用户体验优先**：默认值应该符合用户的主要使用场景，减少额外操作
+2. **数据状态管理**：清楚地定义数据状态的含义，确保前后端理解一致
+3. **问题排查流程**：从数据库 → 后端 → 前端，逐层排查问题
+4. **工具化思维**：提供便捷的检查和管理脚本，提高问题排查效率
+5. **文档完善**：及时更新文档，记录问题和解决方案
 
 ---
 

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import stationRoutes from "./routes/station.js";
+import mapRoutes from "./routes/map.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { testConnection } from "./config/database.js";
 
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/station", stationRoutes);
+app.use("/api/map", mapRoutes);
 
 // 健康检查
 app.get("/api/health", (req, res) => {
@@ -54,7 +56,6 @@ const startServer = async () => {
     // console.log("=".repeat(50));
     // console.log("\n📝 默认账号信息:");
     // console.log("   管理员: admin123456 / 123456");
-    // console.log("   测试用户: test123456 / 123456");
     // console.log("=".repeat(50));
   });
 };
