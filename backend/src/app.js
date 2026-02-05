@@ -5,13 +5,14 @@ import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import stationRoutes from "./routes/station.js";
 import mapRoutes from "./routes/map.js";
+import orderRoutes from "./routes/order.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { testConnection } from "./config/database.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5501;
 
 // 中间件
 app.use(
@@ -28,6 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/station", stationRoutes);
 app.use("/api/map", mapRoutes);
+app.use("/api/order", orderRoutes);
 
 // 健康检查
 app.get("/api/health", (req, res) => {

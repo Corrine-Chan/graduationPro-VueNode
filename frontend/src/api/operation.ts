@@ -2,12 +2,24 @@
 import { post, get } from "@/utils/http";
 
 const Api = {
-  BatchDelete: "/batchDelete",
-  SingleDelete: "/singleDelete",
-  CityList: "/cityList",
+  OrderList: "/api/order/list",
+  OrderDetail: "/api/order/detail",
+  BatchDelete: "/api/order/batchDelete",
+  SingleDelete: "/api/order/singleDelete",
+  CityList: "/api/order/cityList",
 };
 
-// 这里要传一个对象 对象的属性名是order 是一个数组 用es6的语法写为{order}
+// 获取订单列表
+function getOrderListApi(params: any) {
+  return post(Api.OrderList, params);
+}
+
+// 获取订单详情
+function getOrderDetailApi(orderNo: string) {
+  return post(Api.OrderDetail, { orderNo });
+}
+
+// 批量删除订单
 function batchDeleteApi(order: string[]) {
   return post(Api.BatchDelete, { order });
 }
@@ -17,8 +29,15 @@ function singleDeleteApi(orderNo: string) {
   return post(Api.SingleDelete, { orderNo });
 }
 
+// 获取城市列表
 function cityListApi() {
   return get(Api.CityList);
 }
 
-export { batchDeleteApi, singleDeleteApi, cityListApi };
+export {
+  getOrderListApi,
+  getOrderDetailApi,
+  batchDeleteApi,
+  singleDeleteApi,
+  cityListApi,
+};

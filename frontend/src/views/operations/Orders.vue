@@ -118,7 +118,11 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useHttp } from "@/hooks/useHttp";
-import { batchDeleteApi, singleDeleteApi } from "@/api/operation";
+import {
+  batchDeleteApi,
+  singleDeleteApi,
+  getOrderListApi,
+} from "@/api/operation";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter, useRoute } from "vue-router";
 // 使用封装好的页签
@@ -183,7 +187,7 @@ const {
   handleSizeChange,
   handleCurrentChange,
   resetPagination,
-} = useHttp<SelectionListType>("/orderList", searchParams); // .value 就不是一个响应式的数据了 所以就在useHttp中暂时取消它的类型U 改为any
+} = useHttp<SelectionListType>("/api/order/list", searchParams); // 使用新的API路径
 
 // 重置方法
 const handleReset = () => {

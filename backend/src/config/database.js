@@ -27,4 +27,18 @@ export const testConnection = async () => {
   }
 };
 
+// 执行查询
+export const query = async (sql, params = []) => {
+  try {
+    // 统一使用query方法，它能更好地处理各种参数类型
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error("数据库查询错误:", error.message);
+    console.error("SQL:", sql);
+    console.error("参数:", params);
+    throw error;
+  }
+};
+
 export default pool;

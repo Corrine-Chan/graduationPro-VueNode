@@ -1,6 +1,6 @@
 <template>
   <!-- 订单详情页 -->
-  <el-card>
+  <el-card v-loading="loading">
     <!-- 如果没有订单编号，显示提示信息 -->
     <div v-if="!orderNo" class="no-order-tip">
       <el-alert
@@ -16,59 +16,92 @@
     </div>
 
     <!-- 有订单编号时显示详情 -->
-    <div v-else>
+    <div v-else-if="orderDetail">
       <!-- 使用计算属性来获取订单编号 -->
       <el-descriptions :title="`订单编号：${orderNo}`">
         <el-descriptions-item label="订单编号">
           <el-tag size="small">
-            {{ orderNo }}
+            {{ orderDetail.orderNo }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="设备编号"
-          >18100000000</el-descriptions-item
-        >
-        <el-descriptions-item label="订单日期">Suzhou</el-descriptions-item>
+        <el-descriptions-item label="设备编号">
+          {{ orderDetail.equipmentNo }}
+        </el-descriptions-item>
+        <el-descriptions-item label="订单日期">
+          {{ orderDetail.orderDate }}
+        </el-descriptions-item>
         <el-descriptions-item label="站点名称">
-          <el-tag size="small">北京西单充电站</el-tag>
+          <el-tag size="small">{{ orderDetail.stationName }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="结束时间"> 10:34:24 </el-descriptions-item>
-        <el-descriptions-item label="订单金额(元)">66.5</el-descriptions-item>
-        <el-descriptions-item label="支付方式">支付宝</el-descriptions-item>
-        <el-descriptions-item label="所属城市">北京</el-descriptions-item>
-        <el-descriptions-item label="充电量">86</el-descriptions-item>
-        <el-descriptions-item label="充电设备"
-          >充电桩(快充)</el-descriptions-item
-        >
-        <el-descriptions-item label="充电总时长(小时)">2</el-descriptions-item>
-        <el-descriptions-item label="负责人姓名">张三</el-descriptions-item>
-        <el-descriptions-item label="负责人电话"
-          >18634565433</el-descriptions-item
-        >
-        <el-descriptions-item label="维保人员姓名">李四</el-descriptions-item>
-        <el-descriptions-item label="维保人员电话"
-          >13563456543</el-descriptions-item
-        >
+        <el-descriptions-item label="开始时间">
+          {{ orderDetail.startTime }}
+        </el-descriptions-item>
+        <el-descriptions-item label="结束时间">
+          {{ orderDetail.endTime || "充电中" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="订单金额(元)">
+          {{ orderDetail.totalAmount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="支付方式">
+          {{ orderDetail.paymentMethod }}
+        </el-descriptions-item>
+        <el-descriptions-item label="所属城市">
+          {{ orderDetail.city }}
+        </el-descriptions-item>
+        <el-descriptions-item label="充电量(kWh)">
+          {{ orderDetail.energyConsumed || "充电中" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="充电设备">
+          {{ orderDetail.equipmentType }}
+        </el-descriptions-item>
+        <el-descriptions-item label="充电总时长(小时)">
+          {{ orderDetail.chargingDuration || "充电中" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="负责人姓名">
+          {{ orderDetail.managerName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="负责人电话">
+          {{ orderDetail.managerTel }}
+        </el-descriptions-item>
+        <el-descriptions-item label="维保人员姓名">
+          {{ orderDetail.maintenanceName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="维保人员电话">
+          {{ orderDetail.maintenanceTel }}
+        </el-descriptions-item>
         <el-descriptions-item label="订单状态">
-          <el-tag size="small"> 已完成 </el-tag>
+          <el-tag size="small" :type="getStatusType(orderDetail.status)">
+            {{ getStatusText(orderDetail.status) }}
+          </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="服务费(元)">8.0</el-descriptions-item>
-        <el-descriptions-item label="停车费(元)">10.0</el-descriptions-item>
-        <el-descriptions-item label="电费(元)">54.0</el-descriptions-item>
-        <el-descriptions-item label="收费信息"
-          >电费+服务费+停车费，高峰时段费用为2.3元一度，停车费2元/小时，服务费5元/次</el-descriptions-item
-        >
-        <el-descriptions-item label="备注">暂无</el-descriptions-item>
+        <el-descriptions-item label="服务费(元)">
+          {{ orderDetail.serviceFee }}
+        </el-descriptions-item>
+        <el-descriptions-item label="停车费(元)">
+          {{ orderDetail.parkingFee }}
+        </el-descriptions-item>
+        <el-descriptions-item label="电费(元)">
+          {{ orderDetail.electricityFee }}
+        </el-descriptions-item>
+        <el-descriptions-item label="收费信息" :span="3">
+          {{ orderDetail.chargeInfo }}
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="3">
+          {{ orderDetail.remarks }}
+        </el-descriptions-item>
       </el-descriptions>
     </div>
   </el-card>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOrderStore } from "@/store/order";
 import { useTabsStore } from "@/store/tabs";
 import { storeToRefs } from "pinia";
+import { getOrderDetailApi } from "@/api/operation";
+import { ElMessage } from "element-plus";
 
 const route = useRoute();
 const router = useRouter();
@@ -76,6 +109,9 @@ const orderStore = useOrderStore();
 const tabsStore = useTabsStore();
 const { currentOrderNo } = storeToRefs(orderStore);
 const { addTab, setCurrentTab } = tabsStore;
+
+const loading = ref(false);
+const orderDetail = ref<any>(null);
 
 // 计算属性：优先使用store中的订单编号，如果没有则使用路由参数
 const orderNo = computed(() => {
@@ -95,6 +131,37 @@ const orderNo = computed(() => {
   return "";
 });
 
+// 获取订单详情
+const fetchOrderDetail = async () => {
+  if (!orderNo.value) return;
+
+  loading.value = true;
+  try {
+    const res = await getOrderDetailApi(orderNo.value);
+    if (res.code === 200) {
+      orderDetail.value = res.data;
+    } else {
+      ElMessage.error(res.message || "获取订单详情失败");
+    }
+  } catch (error) {
+    console.error("获取订单详情失败:", error);
+    ElMessage.error("获取订单详情失败，请重试");
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 监听订单号变化
+watch(
+  orderNo,
+  (newVal) => {
+    if (newVal) {
+      fetchOrderDetail();
+    }
+  },
+  { immediate: true },
+);
+
 // 返回订单管理页面
 const goToOrders = () => {
   // 添加页签
@@ -103,6 +170,26 @@ const goToOrders = () => {
   setCurrentTab("订单管理", "/operations/orders");
   // 跳转到订单管理页面
   router.push("/operations/orders");
+};
+
+// 获取状态类型
+const getStatusType = (status: number) => {
+  const statusMap: Record<number, string> = {
+    2: "success",
+    3: "primary",
+    4: "warning",
+  };
+  return statusMap[status] || "";
+};
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+  const statusMap: Record<number, string> = {
+    2: "进行中",
+    3: "已完成",
+    4: "异常",
+  };
+  return statusMap[status] || "未知";
 };
 </script>
 

@@ -4,12 +4,12 @@
 
 **统计信息**：
 
-- 总Bug数：5个
-- 已修复：5个
+- 总Bug数：8个
+- 已修复：8个
 - 修复中：0个
 - 待修复：0个
 
-**最后更新**：2026-02-04
+**最后更新**：2026-02-05
 
 ---
 
@@ -1137,6 +1137,207 @@ if (inactiveStations.length > 0) {
 3. **问题排查流程**：从数据库 → 后端 → 前端，逐层排查问题
 4. **工具化思维**：提供便捷的检查和管理脚本，提高问题排查效率
 5. **文档完善**：及时更新文档，记录问题和解决方案
+
+---
+
+## Bug #006: 订单管理模块端口配置错误
+
+**修复日期**: 2026-02-05  
+**影响模块**: 运营管理 > 订单管理  
+**严重程度**: 高  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+订单管理模块开发完成后，无法登录系统。前端显示连接被拒绝错误（ERR_CONNECTION_REFUSED）。
+
+### 问题原因
+
+在 `backend/src/app.js` 中，默认端口配置错误：
+
+```javascript
+const PORT = process.env.PORT || 3000; // 错误：默认3000
+```
+
+而项目配置的端口是5501（在 `.env` 文件中），前端也配置为连接5501端口。
+
+### 修复方案
+
+修改 `backend/src/app.js` 的默认端口：
+
+```javascript
+const PORT = process.env.PORT || 5501; // 正确：默认5501
+```
+
+### 修复文件清单
+
+| 文件路径             | 修改类型 | 说明               |
+| -------------------- | -------- | ------------------ |
+| `backend/src/app.js` | 修改     | 修改默认端口为5501 |
+
+### 测试验证
+
+- ✅ 后端服务启动在5501端口
+- ✅ 前端可以正常连接后端
+- ✅ 登录功能正常
+
+### 经验教训
+
+1. 修改核心配置文件时要注意默认值
+2. 确保前后端端口配置一致
+3. 修改后要测试基础功能（如登录）
+
+---
+
+## Bug #007: 订单管理数据库查询函数缺失
+
+**修复日期**: 2026-02-05  
+**影响模块**: 运营管理 > 订单管理  
+**严重程度**: 高  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+后端服务启动失败，报错：
+
+```
+SyntaxError: The requested module '../config/database.js' does not provide an export named 'query'
+```
+
+### 问题原因
+
+订单控制器 `orderController.js` 中导入了 `query` 函数：
+
+```javascript
+import { query } from "../config/database.js";
+```
+
+但 `database.js` 文件中没有导出这个函数，只导出了 `pool` 和 `testConnection`。
+
+### 修复方案
+
+在 `backend/src/config/database.js` 中添加 `query` 函数：
+
+```javascript
+// 执行查询
+export const query = async (sql, params = []) => {
+  try {
+    // 统一使用query方法，它能更好地处理各种参数类型
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error("数据库查询错误:", error.message);
+    console.error("SQL:", sql);
+    console.error("参数:", params);
+    throw error;
+  }
+};
+```
+
+### 修复文件清单
+
+| 文件路径                         | 修改类型 | 说明              |
+| -------------------------------- | -------- | ----------------- |
+| `backend/src/config/database.js` | 修改     | 添加query函数导出 |
+
+### 测试验证
+
+- ✅ 后端服务正常启动
+- ✅ 订单列表接口正常工作
+- ✅ 其他模块不受影响
+
+### 经验教训
+
+1. 新增模块时要确保依赖的函数已存在
+2. 使用统一的数据库查询方法
+3. 添加详细的错误日志便于调试
+
+---
+
+## Bug #008: 订单管理接口返回500错误
+
+**修复日期**: 2026-02-05  
+**影响模块**: 运营管理 > 订单管理  
+**严重程度**: 高  
+**状态**: ✅ 已修复
+
+### 问题描述
+
+订单列表页面显示500错误，后端报错：
+
+```
+Error: Incorrect arguments to mysqld_stmt_execute
+```
+
+### 问题原因
+
+数据库查询方法使用不当。订单控制器使用了 `pool.execute()` 方法，但该方法对参数类型要求严格，特别是LIMIT和OFFSET参数必须是整数。
+
+而其他控制器（如stationController）使用的是 `pool.query()` 方法，该方法更灵活，能自动处理参数类型转换。
+
+### 修复方案
+
+#### 1. 统一使用 pool.query() 方法
+
+修改 `backend/src/config/database.js` 中的 `query` 函数：
+
+```javascript
+export const query = async (sql, params = []) => {
+  try {
+    // 统一使用query方法，它能更好地处理各种参数类型
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error("数据库查询错误:", error.message);
+    throw error;
+  }
+};
+```
+
+#### 2. 确保分页参数是整数
+
+在 `orderController.js` 中添加类型转换：
+
+```javascript
+const list = await query(listSql, [
+  ...params,
+  parseInt(pageSize),
+  parseInt(offset),
+]);
+```
+
+### 修复文件清单
+
+| 文件路径                                     | 修改类型 | 说明                     |
+| -------------------------------------------- | -------- | ------------------------ |
+| `backend/src/config/database.js`             | 修改     | 统一使用pool.query()方法 |
+| `backend/src/controllers/orderController.js` | 修改     | 确保分页参数类型转换     |
+
+### 测试验证
+
+- ✅ 订单列表接口正常返回数据
+- ✅ 分页功能正常
+- ✅ 查询筛选功能正常
+- ✅ 其他模块（充电站、营收、地图）不受影响
+
+### 技术要点
+
+#### pool.query() vs pool.execute()
+
+- `pool.query()`: 更灵活，自动处理参数类型，适合大多数场景
+- `pool.execute()`: 使用预处理语句，性能更好但参数类型要求严格
+
+建议：
+
+- 一般查询使用 `pool.query()`
+- 高频查询且参数类型固定时使用 `pool.execute()`
+
+### 经验教训
+
+1. 项目中应统一数据库查询方法
+2. 参数类型要明确，特别是数值类型
+3. 参考现有代码的实现方式
+4. 添加详细的错误日志便于定位问题
 
 ---
 

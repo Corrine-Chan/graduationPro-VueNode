@@ -38,19 +38,34 @@ CREATE TABLE IF NOT EXISTS charging_stations (
 CREATE TABLE IF NOT EXISTS charging_orders (
   id INT PRIMARY KEY AUTO_INCREMENT,
   order_no VARCHAR(50) UNIQUE NOT NULL COMMENT '订单号',
-  user_id INT NOT NULL COMMENT '用户ID',
-  station_id INT NOT NULL COMMENT '充电桩ID',
-  start_time DATETIME NOT NULL COMMENT '开始时间',
-  end_time DATETIME COMMENT '结束时间',
-  energy_consumed DECIMAL(10, 2) COMMENT '消耗电量(kWh)',
-  amount DECIMAL(10, 2) COMMENT '金额',
-  status ENUM('charging', 'completed', 'cancelled') DEFAULT 'charging' COMMENT '订单状态',
+  equipment_no VARCHAR(50) NOT NULL COMMENT '设备编号',
+  station_id VARCHAR(50) NOT NULL COMMENT '充电站ID',
+  station_name VARCHAR(200) NOT NULL COMMENT '充电站名称',
+  city VARCHAR(50) NOT NULL COMMENT '所属城市',
+  order_date DATE NOT NULL COMMENT '订单日期',
+  start_time TIME NOT NULL COMMENT '开始时间',
+  end_time TIME COMMENT '结束时间',
+  charging_duration DECIMAL(5, 2) COMMENT '充电时长(小时)',
+  energy_consumed DECIMAL(10, 2) COMMENT '充电量(kWh)',
+  equipment_type VARCHAR(50) COMMENT '充电设备类型',
+  total_amount DECIMAL(10, 2) NOT NULL COMMENT '订单总金额(元)',
+  electricity_fee DECIMAL(10, 2) COMMENT '电费(元)',
+  service_fee DECIMAL(10, 2) COMMENT '服务费(元)',
+  parking_fee DECIMAL(10, 2) COMMENT '停车费(元)',
+  payment_method VARCHAR(20) NOT NULL COMMENT '支付方式',
+  status TINYINT NOT NULL DEFAULT 2 COMMENT '订单状态: 2-进行中 3-已完成 4-异常',
+  manager_name VARCHAR(50) COMMENT '负责人姓名',
+  manager_tel VARCHAR(20) COMMENT '负责人电话',
+  maintenance_name VARCHAR(50) COMMENT '维保人员姓名',
+  maintenance_tel VARCHAR(20) COMMENT '维保人员电话',
+  charge_info TEXT COMMENT '收费信息',
+  remarks TEXT COMMENT '备注',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (station_id) REFERENCES charging_stations(id) ON DELETE CASCADE,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   INDEX idx_order_no (order_no),
-  INDEX idx_user_id (user_id),
+  INDEX idx_equipment_no (equipment_no),
   INDEX idx_station_id (station_id),
+  INDEX idx_order_date (order_date),
   INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充电订单表';
 
@@ -357,4 +372,27 @@ INSERT INTO map_stations (station_id, station_name, address, longitude, latitude
 ON DUPLICATE KEY UPDATE 
   station_name = VALUES(station_name),
   pile_count = VALUES(pile_count),
+  status = VALUES(status);
+
+
+-- 插入示例订单数据（最近30天的订单）
+INSERT INTO charging_orders (
+  order_no, equipment_no, station_id, station_name, city,
+  order_date, start_time, end_time, charging_duration, energy_consumed,
+  equipment_type, total_amount, electricity_fee, service_fee, parking_fee,
+  payment_method, status, manager_name, manager_tel, maintenance_name,
+  maintenance_tel, charge_info, remarks
+) VALUES
+('1738742891234567', 'CD1001', 'VXZ10001', '北京西单充电站', '北京', DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:30:00', '10:45:00', 2.25, 45.50, '充电桩(快充)', 68.50, 54.60, 8.00, 4.50, '微信', 3, '张伟', '17876554801', '李四', '13563456543', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费8元/次', '暂无'),
+('1738742891234568', 'CD1002', 'VXZ10002', '上海陆家嘴充电站', '上海', DATE_SUB(CURDATE(), INTERVAL 2 DAY), '09:15:00', '11:30:00', 2.25, 52.30, '充电桩(快充)', 76.76, 62.76, 8.00, 6.00, '支付宝', 3, '李娜', '17876554802', '王五', '13812345678', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费8元/次', '暂无'),
+('1738742891234569', 'CD1003', 'VXZ10003', '广州花城广场充电站', '广州', DATE_SUB(CURDATE(), INTERVAL 3 DAY), '14:20:00', '16:10:00', 1.83, 38.20, '充电桩(慢充)', 58.64, 45.84, 8.00, 4.80, '储值卡', 3, '王强', '17876554803', '赵六', '13698765432', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费8元/次', '暂无'),
+('1738742891234570', 'CD1004', 'VXZ10004', '深圳大梅沙充电站', '深圳', DATE_SUB(CURDATE(), INTERVAL 4 DAY), '10:00:00', NULL, NULL, NULL, '充电桩(快充)', 8.00, 0.00, 8.00, 0.00, '微信', 2, '赵敏', '17876554804', '孙七', '13745678901', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费8元/次', '暂无'),
+('1738742891234571', 'CD1005', 'VXZ10005', '成都天府广场充电站', '成都', DATE_SUB(CURDATE(), INTERVAL 5 DAY), '16:45:00', '18:30:00', 1.75, 42.80, '充电桩(快充)', 67.36, 51.36, 12.00, 4.00, '支付宝', 3, '李晓华', '17876554805', '周八', '13856789012', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费12元/次', '暂无'),
+('1738742891234572', 'CD1006', 'VXZ10006', '西安钟楼充电站', '西安', DATE_SUB(CURDATE(), INTERVAL 6 DAY), '11:20:00', '13:05:00', 1.75, 35.60, '充电桩(慢充)', 58.72, 42.72, 12.00, 4.00, '微信', 3, '刘伟', '17876554806', '李四', '13563456543', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费12元/次', '暂无'),
+('1738742891234573', 'CD1007', 'VXZ10007', '杭州西湖充电站', '杭州', DATE_SUB(CURDATE(), INTERVAL 7 DAY), '15:30:00', NULL, NULL, NULL, '充电桩(快充)', 10.00, 0.00, 10.00, 0.00, '储值卡', 4, '陈芳', '17876554807', '王五', '13812345678', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费10元/次', '订单异常，需要人工处理'),
+('1738742891234574', 'CD1008', 'VXZ10008', '南京夫子庙充电站', '南京', DATE_SUB(CURDATE(), INTERVAL 8 DAY), '08:00:00', '10:30:00', 2.50, 58.90, '充电桩(快充)', 85.68, 70.68, 10.00, 5.00, '微信', 3, '黄伟', '17876554808', '赵六', '13698765432', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费10元/次', '暂无'),
+('1738742891234575', 'CD1009', 'VXZ10009', '天津意大利风情区充电站', '天津', DATE_SUB(CURDATE(), INTERVAL 9 DAY), '13:15:00', '15:45:00', 2.50, 48.70, '充电桩(快充)', 73.44, 58.44, 10.00, 5.00, '支付宝', 3, '吴敏', '17876554809', '孙七', '13745678901', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费10元/次', '暂无'),
+('1738742891234576', 'CD1010', 'VXZ10010', '青岛栈桥充电站', '青岛', DATE_SUB(CURDATE(), INTERVAL 10 DAY), '17:00:00', '19:15:00', 2.25, 51.20, '充电桩(快充)', 76.44, 61.44, 10.00, 5.00, '储值卡', 3, '杨杰', '17876554810', '周八', '13856789012', '电费+服务费+停车费，高峰时段费用为1.2元一度，停车费2元/小时，服务费10元/次', '暂无')
+ON DUPLICATE KEY UPDATE 
+  total_amount = VALUES(total_amount),
   status = VALUES(status);
